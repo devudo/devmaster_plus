@@ -17,7 +17,7 @@ function devmaster_profile_modules() {
     'ctools',
 
     /* DEVSHOP */
-    'devshop', 'devshop_projects', 'devshop_log', 'devshop_pull',
+    'devshop_hosting', 'devshop_projects', 'devshop_log', 'devshop_pull',
 
   );
 }
