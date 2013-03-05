@@ -185,6 +185,8 @@ function devshop_projects_post_hosting_verify_task($task, $data) {
 
   // If this is a new platform created by a project, we will create a site here.
   if ($task->ref->type == 'platform') {
+    drush_log('[DEVSHOP] Platform Verification complete.', 'notice');
+    
     // Get objects
     $nid = $task->ref->nid;
     $platform = node_load($nid);
@@ -204,25 +206,27 @@ function devshop_projects_post_hosting_verify_task($task, $data) {
       return;
     }
 
-    // If the project has a site already, bail.
+    // If the project has a site already, trigger verification, then bail.
     $sites = array_flip($project->project_objects['site']);
     $sites = hosting_get_sites_by_status($platform->nid, HOSTING_SITE_ENABLED);
     if (!empty($sites)){
       drush_log('[DEVSHOP] Platform already has a site.', 'notice');
+      foreach($sites as $site_nid => $site){
+        hosting_add_task($site_nid, 'verify');
+        drush_log(t('[DEVSHOP] Queued verification for !site', array('!site' => $site->title)), 'notice');
+      }
       return;
     }
 
     // live. Let's create a site based off of this platform.
     drush_log('[DEVSHOP] Platform verified.  Creating your site.');
-
-
     $site_node = devshop_projects_create_site($project, $platform, $platform->environment);
 
     drush_log('[DEVSHOP] Site Created! Please wait for it to be installed. !link', array('!link' => l('node/' . $site_node->nid)));
   }
   
   // When a project is verified, queue a verification for all platforms  
-  if ($task->ref->type == 'project'){
+  if ($task->ref->type == 'project' && isset($task->ref->project_objects['platform'])){
     $project = node_load($task->ref->nid);
     $platform_nids = array_keys($project->project_objects['platform']);
     foreach ($project->project_objects['platform'] as $nid => $name){
@@ -259,14 +263,28 @@ function devshop_projects_hosting_project_context_options(&$task) {
   $task->context_options['git_tags'] = $branches['tags'];
   
   // Load environment settings
-  foreach ($task->ref->project_objects['platform'] as $nid => $name){
-    $platform = node_load($nid);
-    $task->context_options['settings'][$name] = array();
-    
-    // @TODO: HOOK!
-    $task->context_options['settings'][$name]['git_branch'] = $platform->git_branch;
-    $task->context_options['settings'][$name]['pull_enabled'] = $platform->pull_enabled;
-    $task->context_options['settings'][$name]['pull_reset'] = $platform->pull_reset;
+  if (isset($task->ref->settings)) {
+    $task->context_options['settings'] = $task->ref->settings;
+  }
+}
+
+/**
+ * Implements hook_drush_context_import()
+ *
+ * This allows project nodes to be created from contexts (aliases)
+ */
+function devshop_projects_drush_context_import($context, &$node) {
+  if ($context->type == 'project') {
+    $node->title = $context->project_name;
+    $node->type = $context->type;
+    $node->code_path = $context->code_path;
+    $node->base_url = $context->base_url;
+    $node->install_profile = $context->install_profile;
+
+    $node->git_url = $context->git_url;
+    $branches = getBranchesAndTags($context->git_url);
+    $node->git_branches = $branches['branches'];
+    $node->git_tags = $branches['tags'];
   }
 }
 

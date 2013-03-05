@@ -74,6 +74,10 @@ function devshop_projects_form_alter(&$form, &$form_state, $form_id){
       '#type' => 'value',
       '#value' => $node->environment,
     );
+    $form['git_branch'] = array(
+      '#type' => 'value',
+      '#value' => $node->git_branch,
+    );
   }
 }
 
@@ -123,6 +127,16 @@ function devshop_projects_form(&$node) {
     '#weight' => 2,
   );
   
+  // Unchanging Values
+  $form['git_branches'] = array(
+    '#type' => 'value',
+    '#value' => $node->git_branches,
+  );
+  $form['git_tags'] = array(
+    '#type' => 'value',
+    '#value' => $node->git_tags,
+  );
+  
   // Extensible settings
   $form['settings'] = array(
     '#type' => 'fieldset',
@@ -131,29 +145,25 @@ function devshop_projects_form(&$node) {
     '#tree' => TRUE,
   );
   
-  $settings = module_invoke_all('devshop_project_settings');
-  $branch_options = array_combine($node->git_branches, $node->git_branches);
-  foreach ($node->project_objects['platform'] as $nid => $name){
+  $settings = module_invoke_all('devshop_project_settings', $node);
+  foreach ($node->project_objects['platform'] as $nid => $environment_name){
     $platform = node_load($nid);
-    $form['settings'][$name] = array(
+    $form['settings'][$environment_name] = array(
       '#tree' => TRUE,
       '#title' => $name,
       '#type' => 'fieldset',
       '#theme' => 'devshop_projects_settings_table',
     );
-    $form['settings'][$name]['git_branch'] = array(
-      '#type' => 'select',
-      '#title' => t('Branch'),
-      '#default_value' => isset($platform->git_branch)? $platform->git_branch: NULL,
-      '#options' => $branch_options,
-      '#description' => t('Choose the branch that this platform should track.'),
-    );
-    foreach ($settings as $setting => $label){
-      $form['settings'][$name][$setting] = array(
-        '#type' => 'checkbox',
-        '#title' => $label,
-        '#default_value' => $platform->{$setting},
-      );
+    //$form['settings'][$name]['git_branch'] = array(
+    //  '#type' => 'select',
+    //  '#title' => t('Branch'),
+    //  '#default_value' => isset($platform->git_branch)? $platform->git_branch: NULL,
+    //  '#options' => $branch_options,
+    //  '#description' => t('Choose the branch that this platform should track.'),
+    //);
+    foreach ($settings as $setting_id => $setting){
+      $form['settings'][$environment_name][$setting_id] = $setting;
+      $form['settings'][$environment_name][$setting_id]['#default_value'] = $node->settings[$environment_name][$setting_id];
     }
   }
   $form['#submit'] = array('devshop_projects_submit_settings');
@@ -174,16 +184,36 @@ function devshop_projects_form(&$node) {
  * Submit function for save data of platforms.
  */
 function devshop_projects_submit_settings($form, &$form_state) {
-  $node = node_load($form_state['values']['nid']);
-                    
-  // Go through and save our platforms
-  foreach ($node->project_objects['platform'] as $nid => $name){
-    $platform = node_load($nid);
-    $platform->no_verify = TRUE;
-    foreach ($form_state['values']['settings'][$name] as $setting_name => $value){
-      $platform->{$setting_name} = $value;
+  
+
+  // Go through and save our settings
+  $project_node = node_load($form_state['values']['nid']);
+  $settings_info = module_invoke_all('devshop_project_settings', $project_node);
+  $nodes = array();
+  
+  // Go through each environment
+  foreach ($form_state['values']['settings'] as $environment_name => $settings){
+    
+    // Then through each setting of each environment
+    foreach ($settings as $setting_name => $setting_value){
+      
+      //Find the node type for this setting.
+      $node_type = $settings_info[$setting_name]['#node_type'];
+      $nids = array_flip($project_node->project_objects[$node_type]);
+      
+      // Load the site or platform node for this environment, then set the value and save.
+      $nid = $nids[$environment_name];
+      if (empty($nodes[$nid])){
+        $nodes[$nid] = node_load($nid);
+        $nodes[$nid]->no_verify = TRUE;
+      }
+      $nodes[$nid]->{$setting_name} = $setting_value;
     }
-    node_save($platform);
+  }
+  
+  // Go save all nodes
+  foreach ($nodes as $nid => $node){
+    node_save($node);
   }
 }
 

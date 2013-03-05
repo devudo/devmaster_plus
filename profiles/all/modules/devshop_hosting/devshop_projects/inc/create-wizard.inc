@@ -20,7 +20,7 @@ function devshop_projects_create_wizard($step = NULL){
 
   // Setup Step.
   if ($step == NULL){
-    $step = current(array_keys($form_info['order']));
+    drupal_goto('hosting/projects/add/' . current(array_keys($form_info['order'])));
   }
 
   // Create default project object
@@ -43,20 +43,24 @@ function devshop_projects_create_wizard($step = NULL){
     $project->step = $step;
     ctools_object_cache_set('project', $form_state['cache name'], $project);
   }
-
+  
   // Check verification status
   $project_node = node_load($project->project_nid);
   if (!empty($project_node->nid)){
     $tasks = hosting_task_fetch_tasks($project_node->nid);
   }
+  if (isset($tasks['verify']['nid'])){
+    
+  }
   $project->verify_task_status = isset($tasks['verify']['task_status'])? $tasks['verify']['task_status']: HOSTING_TASK_ERROR;
-
+  $project->verify_task_nid = $tasks['verify']['nid'];
+  
   // If project verification failed, we need to ask for a new git url.
   if ($project->verify_task_status === HOSTING_TASK_ERROR && !empty($project_node->nid)){
     drupal_set_message(t('Unable to connect to the git url: !git.  Please check the git URL and try again.', array('!git' => $project->git_url)));
     // If not on the first step, go to it.
     if ($step != current(array_keys($form_info['order']))){
-      drupal_goto('hosting/projects/add');
+      drupal_goto('hosting/projects/add/' . current(array_keys($form_info['order'])));
     }
   }
 
@@ -239,12 +243,27 @@ function devshop_project_create_step_git(&$form, &$form_state) {
   
   // Display helpful tips for connecting.
   $pubkey = variable_get('devshop_public_key', '');
+  $ssh_path = variable_get('devshop_ssh_path', '/var/aegir/.ssh');
+  $pubkey_path = variable_get('devshop_public_key_path', '/var/aegir/.ssh/id_rsa.pub');
   
   // If we don't yet have the server's public key saved as a variable...
   if (empty($pubkey)){
-    $output = t("For convenience, the server's SSH public key would be displayed here.  First, on your server, run the following command and then reload this page:");
-    $command = 'drush @hostmaster vset devshop_public_key "$(cat ~/.ssh/id_rsa.pub)" --yes';
-    $output .= "<div class='command'><input size='160' value='$command' onclick='this.select()' /></div>";
+    // Try to read it from the default location, sometimes www-data can read the public key
+    if (is_readable($ssh_path)){
+      $pubkey = file_get_contents($ssh_path);
+      variable_set('devshop_public_key', $pubkey);
+    }
+    // Sometimes www-data can't read /var/aegir/.ssh/id_rsa.pub, so file_exists
+    // fails. Thats why I'm checking for the parent folder.
+    elseif (!file_exists('/var/aegir/.ssh')) {
+      $output .= t("It appears you do not have SSH keys setup. Please ensure that %path exists, or see !link for a nice guide to generating SSH keys.", array('%path' => $pubkey_path, '!link' => l('github:help', 'https://help.github.com/articles/generating-ssh-keys', array('target' => '_blank'))));
+      
+    } else {
+      $output = t("We were unable to read your public SSH key.  On your server, run the following command and then reload this page..");
+      $command = 'drush @hostmaster vset devshop_public_key "$(cat ~/.ssh/id_rsa.pub)" --yes';
+
+      $output .= "<div class='command'><input size='160' value='$command' onclick='this.select()' /></div>";
+    }
   } else {
     // @TODO: Make this Translatable
     $output = <<<HTML
@@ -297,9 +316,8 @@ function devshop_project_create_step_git_submit(&$from, &$form_state) {
   $project = &$form_state['project'];
 
   // If the project already exists, and git url has changed...
-  if ($project->project_nid && $project->git_url != $form_state['values']['git_url']) {
+  if ($project->project_nid) {
     // Change the git url and save the node.  Verification SHOULD run again.
-    drupal_set_message(t('You have changed the git URL.  Please wait while we verify your remote and branches.'));
     $node = node_load($project->project_nid);
     $node->git_url = $form_state['values']['git_url'];
     $node->branches = array();
@@ -337,7 +355,7 @@ function devshop_project_create_step_git_submit(&$from, &$form_state) {
   // Setup project url.
   $base_url = $_SERVER['SERVER_NAME'];
   $server = variable_get('devshop_project_default_base_url', $base_url);
-  $project->base_url = strtr(variable_get('devshop_project_default_base_url_pattern', "@name.@server"), array('@name' => $project_name, '@server' => $server));
+  $project->base_url = strtr(variable_get('devshop_project_default_base_url_pattern', "@name.@server"), array('@name' => strtolower($project_name), '@server' => $server));
 }
 
 /**********
@@ -429,10 +447,28 @@ function devshop_project_create_step_environments(&$form, &$form_state) {
       '#value' => TRUE,
     );
 
-    // Add JS that reloads the page when tasks finish.
-    $path = drupal_get_path('module', 'devshop_projects') . '/inc/reload.js';
-    drupal_add_js($path);
+    // @TODO: Add proper JS that reloads the page when tasks finish.
+    //$path = drupal_get_path('module', 'devshop_projects') . '/inc/reload.js';
+    //drupal_add_js($path);
     return;
+  }
+  // Handle failure
+  elseif ($project->verify_task_status == HOSTING_TASK_ERROR){
+    $type = 'error';
+    $error = db_result(db_query("SELECT message FROM {hosting_task_log} WHERE nid = %d AND type = '%s' ORDER BY vid, lid", $project->verify_task_nid, $type));  
+    drupal_set_message($error, 'error');
+    $note = '<p class="wait">'. t('Something Failed.  Please check the error message, and retry verification.') . '</p>';
+    
+    $form['note'] = array(
+      '#type' => 'markup',
+      '#value' => $note,
+    );
+    
+    $form['not_ready'] = array(
+      '#type' => 'value',
+      '#value' => TRUE,
+    );
+     return;
   }
 
 
