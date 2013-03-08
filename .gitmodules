@@ -1,0 +1,3 @@
+[submodule "profiles/all/modules/hosting_drush_aliases"]
+	path = profiles/all/modules/hosting_drush_aliases
+	url = http://git.drupal.org/project/hosting_drush_aliases.git
