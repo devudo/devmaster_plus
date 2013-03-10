@@ -138,6 +138,8 @@ function devmaster_bootstrap() {
   $package_id = $node->nid;
 
 /*
+ **/
+
   $node = new stdClass();
   $node->uid = 1;
   $node->type = 'platform';
@@ -182,7 +184,6 @@ function devmaster_bootstrap() {
   $node->hosting_name = 'devmaster';
   $node->status = 1;
   node_save($node);
-*/
 
   // Set the frontpage
   variable_set('site_frontpage', 'hosting/projects');
