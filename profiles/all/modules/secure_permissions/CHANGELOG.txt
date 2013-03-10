@@ -1,0 +1,31 @@
+
+CHANGELOG file for Secure Permissions
+
+31-DEC-2010
+-- #855608 by cos. Better handling of module enable/disable.
+-- #843120 by cos. Easier exporting of permissions to code.
+-- Creates the 6.x.1.2 release.
+-- Updates README documentation.
+-- Creates the 6.x.1.3 release.
+-- Fixes variable typo.
+-- Better handling of permission deletion.
+-- Creates the 6.x.1.5 release - version numbers in sync.
+
+06-JUN-2010
+-- #810006 by DamienMcKenna. Do not rebuild before export.
+-- Creates the 6.x.1.1 release.
+
+26-NOV-2009
+-- First Drupal 6 version.
+-- Cleans up some form handling errors.
+-- Creates the 6.x.1.0 release.
+
+25-NOV-2009
+-- Replaces tabs with two spaces in export.
+-- Separates code-loaded permissions from disabling forms.
+-- Creates the 7.x.1.1 release.
+-- Branch point for the backport to Drupal 6.
+
+22-NOV-2009
+-- Initial project commit.
+-- Creates the 7.x.1.0 release.
