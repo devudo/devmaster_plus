@@ -137,10 +137,11 @@ function devmaster_bootstrap() {
   node_save($node);
   $package_id = $node->nid;
 
+  // @TODO: We need to still call these nodes "hostmaster" because the aliases are still @hostmaster and @platform_hostmaster
   $node = new stdClass();
   $node->uid = 1;
   $node->type = 'platform';
-  $node->title = 'devmaster';
+  $node->title = 'hostmaster';
   $node->publish_path = d()->root;
   $node->web_server = variable_get('hosting_default_web_server', 2);
   $node->status = 1;
@@ -178,7 +179,7 @@ function devmaster_bootstrap() {
   $node->db_server = $db_node->nid;
   $node->profile = $profile_id;
   $node->import = true;
-  $node->hosting_name = 'devmaster';
+  $node->hosting_name = 'hostmaster';
   $node->status = 1;
   node_save($node);
 
