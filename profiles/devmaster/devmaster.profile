@@ -42,9 +42,7 @@ function devmaster_profile_tasks(&$task, $url) {
   install_include(devmaster_profile_modules());
 
   // add support for nginx
-  if (d()->platform->server->http_service_type === 'nginx') {
-    drupal_install_modules(array('hosting_nginx'));
-  }
+  drupal_install_modules(array('hosting_nginx'));
 
   // Bootstrap and create all the initial nodes
   devmaster_bootstrap();
