@@ -1,0 +1,219 @@
+<?php
+/**
+ * @file hosting_filemanager.module
+ *
+ * Display list of files hosted under a site in Aegir.
+ */
+
+/**
+ *
+ */
+function hosting_filemanager_perm() {
+  return array('access filemanager');
+}
+
+/**
+ * Implementation of hook_menu().
+ */
+function hosting_filemanager_menu() {
+  $items['node/%node/files'] = array(
+    'title' => 'Files Browser',
+    'description' => 'Filebrowser',
+    'page callback' => 'hosting_filemanager_manage_form',
+    'page arguments' => array(1),
+    'access callback' => 'hosting_sites_file_access',
+    'access arguments' => array(1),
+    'type' => MENU_LOCAL_TASK,
+    'weight' => 5,
+  );
+  $items['node/%node/files/view'] = array(
+    'title' => 'Site',
+    'description' => 'Filebrowser',
+    'page callback' => 'hosting_filemanager_manage_form',
+    'page arguments' => array(1),
+    'access callback' => 'hosting_sites_file_access',
+    'access arguments' => array(1),
+    'type' => MENU_DEFAULT_LOCAL_TASK,
+    'weight' => -10,
+  );
+  $items['node/%node/files/platform'] = array(
+    'title' => 'Platform',
+    'description' => 'Filebrowser',
+    'page callback' => 'hosting_filemanager_manage_form',
+    'page arguments' => array(1, 'platform'),
+    'access callback' => 'hosting_sites_file_access',
+    'access arguments' => array(1, 'site'), // show a platform tab on site nodes
+    'type' => MENU_LOCAL_TASK,
+    'weight' => 0,
+  );
+
+  // php passthrough links to download files without exposing the real path on
+  // the server
+  $items['hosting_filemanager/%node/openfiles'] = array(
+    'title' => '',
+    'page callback' => 'hosting_filemanager_display',
+    'page arguments' => array(1),
+    'access callback' => TRUE,
+  );
+  $items['hosting_filemanager/%node/file'] = array(
+    'title' => '',
+    'page callback' => 'hosting_filemanager_file',
+    'page arguments' => array(1),
+    'access callback' => TRUE,
+    'file' => 'hosting_filemanager.file.inc',
+  );
+  return $items;
+}
+
+/**
+ * User access function for filebrowser on node.
+ */
+function hosting_sites_file_access($node, $type = NULL) {
+  if (!in_array($node->type, array('site', 'platform'))) {
+    return FALSE;
+  }
+
+  if (isset($type) && $node->type != $type) {
+    return FALSE;
+  }
+
+  return user_access('access filemanager');
+}
+
+/**
+ *
+ */
+function hosting_filemanager_theme() {
+  return array(
+    'filebrowser_tree' => array(
+      'arguments' => array('tree' => array()),
+      'template' => 'theme/tree',
+    ),
+  );
+}
+
+/**
+ * Return the filesystem path for the node (site or platform).
+ */
+function hosting_filemanager_root($node) {
+  if ($node->type == 'site') {
+    $platform = node_load($node->platform);
+    $root = $platform->publish_path . '/sites/' . $node->title;
+  }
+  elseif ($node->type == 'platform') {
+    $root = $node->publish_path;
+  }
+  elseif ($node->type == 'client') {
+    $root = '/var/aegir/clients/' . $node->uname;
+  }
+  else {
+    return FALSE;
+  }
+  return $root;
+}
+
+/**
+ *
+ */
+function hosting_filemanager_display($node) {
+  modalframe_child_js();
+
+  $file = $_GET['file']; // todo: clean
+  module_load_include('inc', 'hosting_filemanager', 'hosting_filemanager.editor');
+  $output .= hosting_filemanager_viewer($file, $node); 
+
+  return $output;
+}
+
+/**
+ * Dispaly the filetree for the node.
+ */
+function hosting_filemanager_manage_form($node, $type = 'site') {
+  if (!empty($_POST)) {
+    return hosting_filemanager_get_dir($node, $_POST['dir']);
+  }
+  $path = drupal_get_path('module', 'hosting_filemanager');
+  drupal_add_css($path . '/libraries/jqueryFileTree/jqueryFileTree.css');
+  drupal_add_css($path . '/hosting_filemanager.css');
+  drupal_add_js($path . '/libraries/jqueryFileTree/jqueryFileTree.js');
+  drupal_add_js($path . '/hosting_filemanager.js');
+  modalframe_parent_js();
+
+  if ($node->type == 'site' && $type == 'site') {
+   $output = '<div class="file-manager" rel="' . $node->nid . '"></div>';
+  }
+  if ($node->type =='site' && $type == 'platform') {
+    $platform = node_load($node->platform);
+    $output = '<div class="file-manager" rel="' . $platform->nid . '"></div>';
+  }
+  if ($node->type == 'platform') {
+    $output ='<div class="file-manager" rel="' . $node->nid . '"></div>';
+  }
+
+  return $output;
+}
+
+/**
+ * @todo - theme this.
+ */
+function hosting_filemanager_get_dir($site, $dir) {
+  if (($root = hosting_filemanager_root($site)) === FALSE) return "";
+
+  $tree = array();
+
+  $dir = urldecode($dir);
+  if (file_exists($root . $dir) ) {
+    $files = scandir($root . $dir);
+    natcasesort($files);
+    if ( count($files) > 2 ) { /* The 2 accounts for . and .. */
+      // All dirs
+      foreach( $files as $file ) {
+        $class = 'directory collapsed';
+        if (substr($file, 0, 1) == '.') $class .= ' hidden';
+        if ($site->type == 'platform' && $dir == '/sites/' && $file != 'all') continue;
+        if( file_exists($root . $dir . $file) && $file != '.' && $file != '..' && is_dir($root . $dir . $file) ) {
+          $tree[] = array(
+            'class' => $class,
+            'data' => l(htmlentities($file), "\#", array(
+              'attributes' => array(
+                'rel' => htmlentities($dir . $file . '/')
+              )
+            )),
+          );
+        }
+      }
+      // All files
+      foreach( $files as $file ) {
+        if( file_exists($root . $dir . $file) && $file != '.' && $file != '..' && !is_dir($root . $dir . $file) ) {
+          module_load_include('inc', 'hosting_filemanager', 'hosting_filemanager.file');
+          $ext = _hosting_filemanager_get_extension($file);
+          $size = "<span class=\"size\">". _hosting_filemanager_format_file_size(filesize($root . $dir . $file)) ."</span>";
+          $perm = "<span class=\"perm\">". _hosting_filemanager_perm($root . $dir . $file) ."</span>";
+          $own = "<span class=\"own\">". _hosting_filemanager_own($root . $dir . $file) ."</span>";
+          $class = 'file ext_' . $ext;
+          if (substr($file, 0, 1) == '.') {
+            $class .= ' hidden';
+          }
+          $tree[] = array(
+            'class' => $class,
+            'data' => $size . $perm . $own . l(htmlentities($file), "\#", array(
+              'attributes' => array(
+                'rel' => htmlentities($dir . $file)
+              )
+            )),
+          );
+        }
+      }
+    }
+  }
+  print theme('filebrowser_tree', $tree);
+  exit();
+}
+
+/**
+ * return the file extension from a filename.
+ */
+function _hosting_filemanager_get_extension($file) {
+  return preg_replace('/^.*\./', '', $file);
+}
+

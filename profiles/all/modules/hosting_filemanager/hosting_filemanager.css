@@ -1,0 +1,40 @@
+.file.hidden, .directory.hidden {
+  opacity: 0.4;
+}
+
+.file-manager { padding: 10px; }
+.file {font-family:'Courier';}
+.file .size {float:right; font-family:'Courier'; width: 80px; text-align:right;}
+.file .perm {float:right; font-family:'Courier';}
+.file .own {float:right; font-family:'Courier'; padding-right: 10px;}
+#pdf {
+  width: 760px;
+  height: 400px;
+  margin: 2em auto;
+  border: 10px solid #6699FF;
+}
+
+#pdf p {
+  padding: 1em;
+}
+
+#pdf object {
+  display: block;
+  border: solid 1px #666;
+}
+
+ul.jqueryFileTree li {
+  list-style: none !important;
+}
+
+.file-viewer {
+
+}
+.file-viewer .action-links {
+  float:right;
+}
+.file-viewer .content {
+  clear: both;
+}
+
+textarea.code { min-height: 200px; }
