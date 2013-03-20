@@ -1,0 +1,13 @@
+name = Hosting Drush Aliases
+description = Provides a link to let privileged users download a drush alias file for all sites.
+package = Hosting
+dependencies[] = hosting
+
+core = 6.x
+
+; Information added by drupal.org packaging script on 2012-09-13
+version = "6.x-1.0-alpha4"
+core = "6.x"
+project = "hosting_drush_aliases"
+datestamp = "1347570797"
+

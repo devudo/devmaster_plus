@@ -1,0 +1,148 @@
+<?php
+/**
+ * @file Send notifications to HipChat room when a task completes or fails.
+ */
+
+/**
+ * Implementation of hook_menu().
+ */
+function aegir_hipchat_menu() {
+  $items = array();
+
+  $items['admin/hosting/hipchat'] = array(
+    'title' => t('HipChat'),
+    'description' => t('Configure HipChat notifications'),
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('aegir_hipchat_admin_form'),
+    'type' => MENU_LOCAL_TASK,
+    'access arguments' => array('administer hosting settings'),
+  );
+
+  return $items;
+}
+
+/**
+ * Implementation of hook_nodeapi().
+ */
+function aegir_hipchat_nodeapi(&$node, $op, $a3 = NULL, $a4 = NULL) {
+  if ($node->type == 'task') {
+    $task_types = aegir_hipchat_tasks();
+
+    if ($task_types[$node->task_type]) {
+      switch ($op) {
+        case "update":
+          if ($node->task_status == HOSTING_TASK_SUCCESS || $node->task_status == HOSTING_TASK_ERROR) {
+            _aegir_hipchat_send_message($node, $task_types[$node->task_type]);
+          }
+          break;
+      }
+    }
+  }
+}
+
+/**
+ * Send message to HipChat room.
+ *
+ * Recieves the task node and name from aegir_hipchat_nodeapi().
+ *
+ */
+function _aegir_hipchat_send_message($task, $name) {
+  $auth_token = variable_get('aegir_hipchat_auth_token', '');
+  $room_id = variable_get('aegir_hipchat_room_id', '');
+
+  if (!empty($auth_token) && !empty($room_id)) {
+    $parameters = array(
+      'auth_token' => $auth_token,
+      'room_id' => $room_id,
+      'from' => "Aegir",
+      'notify' => 1,
+    );
+
+    switch ($task->task_status) {
+      case 1:
+        $status = t('succeeded');
+        $parameters['color'] = "green";
+        break;
+      case 2:
+        $status = t('failed');
+        $parameters['color'] = "red";
+        break;
+    }
+
+    $node = l($task->ref->title, 'node/' . $task->ref->nid, array('absolute' => true));
+    $parameters['message'] = sprintf("%s %s for %s", $name, $status, $node);
+
+    $request = "https://api.hipchat.com/v1/rooms/message?" . http_build_query($parameters, '', '&');
+    $response = drupal_http_request($request);
+    $response_data = json_decode($response->data);
+
+    if (isset($response_data->error)) {
+      watchdog('aegir_hipchat', $response_data->error->message, NULL, WATCHDOG_ERROR);
+    }
+  }
+}
+
+/**
+ * Menu callback; presents HipChat configuration options.
+ */
+function aegir_hipchat_admin_form($form_state) {
+  $form = array();
+
+  $form['aegir_hipchat_auth_token'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Authentication token'),
+    '#description' => t('Group admins may create tokens on the !tokens page.', array("!tokens" => l(t('API Tokens'), "https://www.hipchat.com/admin/api"))),
+    '#default_value' => variable_get('aegir_hipchat_auth_token', ''),
+  );
+
+  $form['aegir_hipchat_room_id'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Room id'),
+    '#description' => t('The id of the room to send messages to.'),
+    '#default_value' => variable_get('aegir_hipchat_room_id', ''),
+    '#size' => 10,
+    '#maxlength' => 10,
+  );
+
+  $form['aegir_hipchat_notify_state'] = array(
+    '#type' => 'checkboxes',
+    '#title' => t('Task states'),
+    '#description' => t('Choose which task states to send notifications for.'),
+    '#default_value' => variable_get('aegir_hipchat_notify_state', array('1' => '1', '2' => '2')),
+    '#options' => array(
+      HOSTING_TASK_SUCCESS => t('Success'),
+      HOSTING_TASK_ERROR => t('Error'),
+    ),
+  );
+
+  $form['aegir_hipchat_notify_type'] = array(
+    '#type' => 'checkboxes',
+    '#title' => t('Task actions'),
+    '#description' => t('Choose which task actions to send notifications for.'),
+    '#default_value' => variable_get('aegir_hipchat_notify_type', array('verify' => 'verify')),
+    '#options' => aegir_hipchat_tasks(),
+  );
+
+  return system_settings_form($form);
+}
+
+/**
+ * List available tasks.
+ */
+function aegir_hipchat_tasks() {
+  static $tasks;
+
+  if (!isset($tasks)) {
+    $tasks = array();
+
+    foreach (array('site', 'platform', 'server') as $type) {
+      foreach (hosting_available_tasks($type) as $name => $task) {
+        $tasks[$name] = $task['title'];
+      }
+    }
+
+    ksort($tasks);
+  }
+
+  return $tasks;
+}

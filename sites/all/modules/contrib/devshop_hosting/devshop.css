@@ -1,0 +1,94 @@
+div#header div.logo a {
+  text-indent: -999px;
+  overflow: hidden;
+  height: 72px !important;
+  width: 72px !important;
+  margin: 10px;
+}
+
+#devshop-project-create-step-environments .platform {
+  clear: both;
+  border-bottom: 1px solid #e8e8e8;
+}
+#devshop-project-create-step-environments .platform .form-item {
+  float: left;
+  width: 46%;
+  clear: none;
+  height: 2.0em;
+  border-bottom: none;
+}
+body.aegir #page div.node div.content fieldset.project-environments div.form-item {
+  padding: 5px;
+}
+
+fieldset.project-environments {
+  clear: both;
+}
+
+#project-settings-table .description,
+#project-settings-table .form-item-labeled label
+{
+  display: none;  
+}
+.empty {
+  text-align: center;
+}
+.empty .empty-message {
+  padding:30px;
+}
+.empty .empty-button a {
+  font: bold 13px/20px "Helvetica Neue",Arial,sans-serif;
+  border: 0px;
+  padding: 5px 10px;
+  color: #fff;
+  background: #666;
+  cursor: pointer;
+  -moz-border-radius: 3px;
+  -webkit-border-radius: 3px;
+}
+
+textarea#rsa {
+  display: none;
+}
+
+p.wait {
+  text-align: center;
+  padding: 30px 0px 0px;
+}
+
+.form-submit {
+  margin-top: 10px;
+}
+#edit-return, #edit-next {
+  float: right;
+  font-size: 2.0em;
+  height: 2.0em;
+}
+
+.command input {
+  font-family: Courier New, monospace;
+  width: 100%;
+}
+#footer {
+  height: 100px !important;
+  line-height: inherit !important;
+}
+#footer h2 {
+  border: none;
+  font-weight: normal;
+  text-transform: uppercase;
+}
+#footer .block {
+  float: left;
+  margin-right: 20px;
+  
+}
+
+#block-system-0.block {
+  float: right;
+}
+
+body.node-type-project a.hosting-goto-site-link {
+  background: none;
+  padding: inherit;
+}

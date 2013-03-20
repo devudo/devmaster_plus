@@ -1,0 +1,11 @@
+name = Secure Permissions
+description = Disables the user interface for creating and assigning roles and permissions.
+core = 6.x
+dependencies[] = permissions_api
+
+; Information added by drupal.org packaging script on 2011-12-20
+version = "6.x-1.6"
+core = "6.x"
+project = "secure_permissions"
+datestamp = "1324379443"
+

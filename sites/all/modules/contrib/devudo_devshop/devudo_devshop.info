@@ -1,0 +1,7 @@
+name = DEVUDO DevShop
+description = Takes over devshop so we can provide it as a service.
+core = 6.x
+package = DEVUDO
+
+dependencies[] = devshop_hosting
+
