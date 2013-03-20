@@ -1,5 +1,0 @@
-
-
-Drupal.behaviors.devshopReload = function() {
-  
-}
