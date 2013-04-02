@@ -15,7 +15,7 @@ hostingTaskRefreshList = function() {
       $("#hosting-task-list").html(data.markup);
 
       hostingTaskBindButtons('#hosting-task-list');
-      setTimeout("hostingTaskRefreshList()", 30000);
+      setTimeout("hostingTaskRefreshList()", 5000);
     }
   }
  
@@ -38,7 +38,7 @@ function hostingTaskRefreshQueueBlock() {
     $("#hosting-task-queue-block").html(data.markup);
 
     hostingTaskBindButtons('#hosting-task-queue-block');
-    setTimeout("hostingTaskRefreshQueueBlock()", 30000);
+    setTimeout("hostingTaskRefreshQueueBlock()", 5000);
   }
  
   hostingTaskAddOverlay('#hosting-task-queue-block');
@@ -47,8 +47,8 @@ function hostingTaskRefreshQueueBlock() {
 
 $(document).ready(function() {
   $(document).data('hostingOpenModalFrame', false);
-  setTimeout("hostingTaskRefreshList()", 30000);
-  setTimeout("hostingTaskRefreshQueueBlock()", 30000);
+  setTimeout("hostingTaskRefreshList()", 5000);
+  setTimeout("hostingTaskRefreshQueueBlock()", 5000);
   hostingTaskBindButtons($(this));
   $('#hosting-task-confirm-form-actions a').click(function() {
     if (parent.Drupal.modalFrame.isOpen) {
