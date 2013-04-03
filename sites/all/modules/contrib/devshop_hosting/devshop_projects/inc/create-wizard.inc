@@ -334,7 +334,7 @@ function devshop_project_create_step_git_submit(&$from, &$form_state) {
   }
 
   // Now that we have the project name, set the defaults for code path and project URL
-  $project->code_path = variable_get('devshop_projects_path', '/var/aegir/projects'). '/'. $project_name));
+  $project->code_path = variable_get('devshop_projects_path', '/var/aegir/projects'). '/'. $project_name;
 
   // Setup project url.
   $base_url = $_SERVER['SERVER_NAME'];
