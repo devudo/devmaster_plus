@@ -11,7 +11,7 @@
  * a table.
  */
 function devshop_projects_projects_page() {
-
+  drupal_set_title(t('Projects'));
   $header = array(
     'Name',
     'Profile',
@@ -106,20 +106,20 @@ function devshop_projects_view($node, $teaser = FALSE, $page = FALSE) {
     '#suffix' => '</div>'
   );
 
-  $node->content['info']['code_path'] = array(
-    '#type' => 'item',
-    '#title' => t('Code path'),
-    '#value' => filter_xss($node->code_path),
-    '#weight' => -8
-  );
-
-  $url = 'http://dev.' . $node->base_url;
-  $node->content['info']['base_url'] = array(
-    '#type' => 'item',
-    '#title' => t('Dev Site'),
-    '#value' => l($url, $url, array('attributes' => array('target' => '_blank'))),
-    '#weight' => -10
-  );
+  //$node->content['info']['code_path'] = array(
+  //  '#type' => 'item',
+  //  '#title' => t('Code path'),
+  //  '#value' => filter_xss($node->code_path),
+  //  '#weight' => -8
+  //);
+  //
+  //$url = 'http://dev.' . $node->base_url;
+  //$node->content['info']['base_url'] = array(
+  //  '#type' => 'item',
+  //  '#title' => t('Dev Site'),
+  //  '#value' => l($url, $url, array('attributes' => array('target' => '_blank'))),
+  //  '#weight' => -10
+  //);
 
   $node->content['info']['git_url'] = array(
     '#type' => 'item',
@@ -129,11 +129,20 @@ function devshop_projects_view($node, $teaser = FALSE, $page = FALSE) {
   );
 
   if (!empty($node->git_branches)){
+   $items = theme_item_list($node->git_branches, NULL, 'ul', array('class' => 'branches')); 
+    $verify_task = hosting_get_most_recent_task($node->nid, 'verify');
+    
+    if ($verify_task->task_status == HOSTING_TASK_SUCCESS){    
+      $refresh_link =  l(t('Refresh branches'), 'node/' . $node->nid . '/project_verify', array('attributes' => array('class' => 'refresh-link'), 'query' => array('token' => drupal_get_token($user->uid))));
+    } else {
+      $refresh_link =  t('Refresh in progress...');
+    }
+    
     $node->content['info']['git_branches'] = array(
       '#type' => 'item',
       '#title' => t('Remote Branches'),
-      '#value' => implode($node->git_branches, ' '),
-      '#weight' => -8
+      '#value' => '<div class="branches-list">' . $items . $refresh_link . '</div>',
+      '#weight' => -8,
     );
   }
 
@@ -142,7 +151,7 @@ function devshop_projects_view($node, $teaser = FALSE, $page = FALSE) {
       '#type' => 'item',
       '#title' => t('Install profile'),
       '#value' => ($node->install_profile),
-      '#weight' => -8
+      '#weight' => -7
     );
   }
 
@@ -160,7 +169,8 @@ function devshop_projects_view($node, $teaser = FALSE, $page = FALSE) {
       if ($site->site_status != -2) {
         
         //$row[] = l($url, $url, array('attributes' => array('target' => '_blank')));
-        $row[] = devshop_hosting_site_goto_link($site);
+        $branch = "<span class='branch'>$site->git_branch</span>";
+        $row[] = devshop_hosting_site_goto_link($site) . $branch;
         $row[] = l('Site Dashboard', "node/$site->nid");
       }
       else {
@@ -193,7 +203,7 @@ function devshop_projects_view($node, $teaser = FALSE, $page = FALSE) {
       ),
     );
     global $user;
-    $link = l(t('Create New Environment'), 'node/' . $node->nid . '/project_devshop-create', array('query' => array('token' => drupal_get_token($user->uid))));
+    $link = l(t('Create New Environment'), 'node/' . $node->nid . '/project_devshop-create', array('attributes' => array('class' => 'create-new-environment'), 'query' => array('token' => drupal_get_token($user->uid))));
     $node->content['sites']['table'] = array(
       '#type' => 'item',
       '#value' => $table,
