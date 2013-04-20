@@ -1,5 +1,10 @@
 <?php
-// $Id$
+/**
+ * @file devmaster.profile
+ * This started as a copy of hostmaster and is slowly being turned into a new
+ * profile.
+ *
+ */
 
 /**
  * Return an array of the modules to be enabled when this profile is installed.
@@ -17,8 +22,10 @@ function devmaster_profile_modules() {
     'ctools',
 
     /* DEVSHOP */
-    'devshop_tasks', 'devshop_projects', 'devshop_log', 'devshop_pull',
-
+    'devshop_hosting', 'devshop_projects', 'devshop_log', 'devshop_pull',
+    
+    /* NICEITIES */
+    'hosting_drush_aliases', 'hosting_filemanager', 'hosting_logs', 'hosting_queue_runner',
   );
 }
 
@@ -31,7 +38,7 @@ function devmaster_profile_modules() {
 function devmaster_profile_details() {
   return array(
     'name' => 'Devmaster',
-    'description' => 'A super powered front-end for DevShop.'
+    'description' => 'The DevShop Distribution.'
   );
 }
 
@@ -135,11 +142,11 @@ function devmaster_bootstrap() {
   node_save($node);
   $package_id = $node->nid;
 
-/*
+  // @TODO: We need to still call these nodes "hostmaster" because the aliases are still @hostmaster and @platform_hostmaster
   $node = new stdClass();
   $node->uid = 1;
   $node->type = 'platform';
-  $node->title = 'devmaster';
+  $node->title = 'hostmaster';
   $node->publish_path = d()->root;
   $node->web_server = variable_get('hosting_default_web_server', 2);
   $node->status = 1;
@@ -177,16 +184,15 @@ function devmaster_bootstrap() {
   $node->db_server = $db_node->nid;
   $node->profile = $profile_id;
   $node->import = true;
-  $node->hosting_name = 'devmaster';
+  $node->hosting_name = 'hostmaster';
   $node->status = 1;
   node_save($node);
-*/
 
   // Set the frontpage
-  variable_set('site_frontpage', 'hosting/projects');
+  variable_set('site_frontpage', 'devshop');
 
   // Set the sitename
-  variable_set('site_name', 'DEVSHOP');
+  variable_set('site_name', 'DevShop');
 
   // do not allow user registration: the signup form will do that
   variable_set('user_register', 0);
@@ -243,7 +249,7 @@ function devmaster_task_finalize() {
   install_remove_permissions(install_get_rid('authenticated user'), array('access content', 'access all views'));
   install_add_permissions(install_get_rid('anonymous user'), array('access disabled sites'));
   install_add_permissions(install_get_rid('authenticated user'), array('access disabled sites'));
-  install_add_role('aegir client');
+  //install_add_role('aegir client');
 
   // @todo we may need to have a hook here to consider plugins
   // install_add_permissions(install_get_rid('aegir client'), array('access content', 'access all views', 'edit own client', 'view client', 'create site', 'delete site', 'view site', 'create backup task', 'create delete task', 'create disable task', 'create enable task', 'create restore task', 'view own tasks', 'view task', 'cancel own tasks'));
