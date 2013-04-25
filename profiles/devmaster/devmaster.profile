@@ -20,7 +20,7 @@ function devmaster_profile_modules() {
     'devshop_hosting', 'devshop_projects', 'devshop_log', 'devshop_pull',
 
     /* DEVUDO */
-    'devudo_devshop',
+    'devudo_devshop', 'devudo_users'
   );
 }
 
