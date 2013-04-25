@@ -25,7 +25,7 @@ function devmaster_profile_modules() {
     'devshop_hosting', 'devshop_projects', 'devshop_log', 'devshop_pull',
     
     /* NICEITIES */
-    'hosting_drush_aliases', 'hosting_filemanager', 'hosting_logs', 'hosting_queue_runner',
+    'hosting_drush_aliases', 'hosting_filemanager', 'hosting_logs', 'hosting_queue_runner', 'hosting_solr'
   );
 }
 
