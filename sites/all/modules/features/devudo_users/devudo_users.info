@@ -1,7 +1,0 @@
-name = "Devudo Users"
-description = "Roles and permissions for Devudo devmaster"
-core = "6.x"
-package = "Features"
-dependencies[] = "features"
-features[user_role][] = "administrator"
-features[user_role][] = "project admin"
