@@ -1,0 +1,12 @@
+<?php
+
+/**
+ * Implementation of hook_update_N
+ */
+function devudo_devshop_update_6000() {
+  $ret = array();
+
+  module_enable(array('hosting_tasks_extra'));
+
+  return $ret;
+}

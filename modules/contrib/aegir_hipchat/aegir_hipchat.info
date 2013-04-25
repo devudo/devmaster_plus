@@ -1,0 +1,5 @@
+name = "Hipchat"
+description = "Sends notifications to <a href='http://hipchat.com'>HipChat</a> room when a task is executed"
+core = 6.x
+package = Hosting
+dependencies[] = hosting
