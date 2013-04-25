@@ -1,4 +1,5 @@
 <?php
+
 /**
  * @file devshop_projects.drush.inc
  * Keeping things organized.  All code that is really run via drush commands
@@ -32,6 +33,7 @@ function drush_devshop_projects_pre_hosting_task() {
     $task->options['update'] = $task->task_args['update'];
     $task->options['revert'] = !empty($task->task_args['revert']);
     $task->options['cache'] = $task->task_args['cache'];
+    $task->options['force'] = $task->task_args['force'];
   }
 
   // Commit
@@ -87,6 +89,19 @@ function drush_devshop_provision_pre_hosting_task_platform_verify(){
   $root = $platform->publish_path;
   $git_remote = $platform->git_url;
   $git_branch = $platform->git_branch;
+  $create_branch = FALSE;
+  drush_log(print_r($platform, 1));
+  //If is set site nid clone from old site and later create a new branch.
+  if (isset($platform->clone_nid)) {
+    $site_source = node_load($platform->clone_nid);
+    $git_branch = $site_source->git_branch;
+    $create_branch = TRUE;
+  }
+
+  //Remove drupal_path to clone.
+  if ($platform->drupal_path) {
+    $root = str_replace($platform->drupal_path, '', $root);
+  }
 
   // Check if a repo exists
   if (!is_dir($root) || !drush_shell_cd_and_exec($root, 'git status')){
@@ -106,29 +121,29 @@ function drush_devshop_provision_pre_hosting_task_platform_verify(){
     $git_remote = $platform->git_url;
     $git_branch = $platform->git_branch;
 
+    //Remove drupal_path to clone.
+    if ($platform->drupal_path) {
+      $root = str_replace($platform->drupal_path, '', $root);
+    }
+
     // Build the command string
     $command = "git checkout $git_branch";
   }
 
   // Execute
-  if (!empty($command)){
-     drush_log('[DEVSHOP] Running: ' . $command);
+  $output =  _devshop_projects_git_execute($command, $root);
 
-    // @TODO: Create a d()->server->shell_cd_and_exec() function
-    //  server->shell_exec() uses escapeshellcmd(), so we cannot cd_and_exec!
-    // So instead, this is the code from d()->server->shell_exec
-    // d()->server->shell_exec($cmd);
-    if (provision_is_local_host(d()->server->remote_host)) {
-      drush_shell_cd_and_exec($root, escapeshellcmd($command));
-    }
-    else {
-      drush_shell_cd_and_exec($root, 'ssh ' . drush_get_option('ssh-options', '-o PasswordAuthentication=no') . ' %s %s', $this->script_user . '@' . d()->server->remote_host, escapeshellcmd($command));
-    }
+  if ($create_branch) {
+    //Create branch.
+    $command = "git checkout -b $platform->git_branch";
+    $output .=  _devshop_projects_git_execute($command, $root);
 
-    $output = drush_shell_exec_output();
-    drush_log('Shell Output: ' . implode("\n", $output) , 'warning');
-    return $output;
+    //Push the branch
+    $command = "git push -u origin $platform->git_branch";
+    $output .=  _devshop_projects_git_execute($command, $root);
   }
+
+  return $output;
 }
 
 /**
@@ -150,6 +165,7 @@ function devshop_projects_post_hosting_delete_task($task, $data) {
     // @TODO: Should probably add our own status column
     // The last step set status = 0 project node
     $task->ref->status = 0;
+    $task->ref->no_verify = TRUE;
     node_save($task->ref);
   }
   
@@ -168,14 +184,30 @@ function devshop_projects_post_hosting_delete_task($task, $data) {
     if ($project->status == 0){
       // Don't know if this platform is still here or not...
       unset($project->project_objects['platform'][$task->ref]);
-      if (empty($project->project_objects['platform'])){
-        drush_log('[DEVSHOP] Last Platform! Removing code_path folder.', 'ok');
-        rmdir($project->code_path);
-      }   
-    }
-   
-  }
 
+      //Check if all platforms were deleted. If is the last platform delete root folder.       
+      $last = TRUE;
+      if (!empty($node->project_objects['platform'])) {
+        foreach ($project->project_objects['platform'] as $nid => $type) {
+          $platform_status = db_result(db_query("SELECT status FROM {hosting_platform} WHERE nid = %d", $nid));
+          if ($nid != $task->ref && $platform_status != HOSTING_PLATFORM_DELETED) {
+            $last = FALSE;
+          }
+        }
+      }
+      if ($last) {
+        drush_log('[DEVSHOP] Last Platform! Removing code_path folder.', 'ok');
+
+        //Is the drupal directory isn't empty then we need to delete recursively
+        if ($project->drupal_path) {
+          _devshop_rrmdir($project->code_path);
+        }
+        else {
+          rmdir($project->code_path);
+        }
+      }   
+    } 
+  }
 }
 
 /**
@@ -220,18 +252,35 @@ function devshop_projects_post_hosting_verify_task($task, $data) {
 
     // live. Let's create a site based off of this platform.
     drush_log('[DEVSHOP] Platform verified.  Creating your site.');
-    $site_node = devshop_projects_create_site($project, $platform, $platform->environment);
 
-    drush_log('[DEVSHOP] Site Created! Please wait for it to be installed. !link', array('!link' => l('node/' . $site_node->nid)));
+    //Check if clone or create a new site.
+    if ($platform->clone_nid) {
+      $servers = hosting_get_servers('db');
+      $args['target_platform'] = $platform->nid;
+      $args['new_uri'] = $platform->environment .'.'. $project->base_url;
+      $args['new_db_server'] = key($servers);
+      hosting_add_task($platform->clone_nid, 'clone', $args);
+    }
+    else {
+      $site_node = devshop_projects_create_site($project, $platform, $platform->environment);
+      drush_log('[DEVSHOP] Site Created! Please wait for it to be installed. !link', array('!link' => l('node/' . $site_node->nid)));
+    }
   }
   
   // When a project is verified, queue a verification for all platforms  
   if ($task->ref->type == 'project' && isset($task->ref->project_objects['platform'])){
     $project = node_load($task->ref->nid);
     $platform_nids = array_keys($project->project_objects['platform']);
-    foreach ($project->project_objects['platform'] as $nid => $name){
-      drush_log('[DEVSHOP] Running verify on project: ' . $name, 'ok');
-      hosting_add_task($nid, 'verify');
+    foreach ($project->project_objects['platform'] as $nid => $name) {
+      //Check if a platform was deleted for exclude from verify.
+      $status = db_result(db_query("SELECT status FROM {hosting_platform} WHERE nid = %d", $nid));
+      if ($status != HOSTING_PLATFORM_DELETED) {
+        drush_log('[DEVSHOP] Running verify on project: ' . $name, 'ok');
+        hosting_add_task($nid, 'verify');
+      }
+      else {
+        drush_log('[DEVSHOP] Can\'t run verify on project: ' . $name, 'ok');
+      }
     }
   }
 }
@@ -249,6 +298,7 @@ function devshop_projects_hosting_project_context_options(&$task) {
   $task->context_options['install_profile'] = $task->ref->install_profile;
   $task->context_options['base_url'] = $task->ref->base_url;
   $task->context_options['code_path'] = trim($task->ref->code_path, " ");
+  $task->context_options['drupal_path'] = trim($task->ref->drupal_path, " ");
   $task->context_options['git_url'] = $task->ref->git_url;
 
   $branches = getBranchesAndTags($task->ref->git_url);
@@ -278,6 +328,7 @@ function devshop_projects_drush_context_import($context, &$node) {
     $node->title = $context->project_name;
     $node->type = $context->type;
     $node->code_path = $context->code_path;
+    $node->drupal_path = $context->drupal_path;
     $node->base_url = $context->base_url;
     $node->install_profile = $context->install_profile;
 
@@ -372,3 +423,28 @@ function devshop_projects_hosting_platform_context_options(&$task) {
   }
 }
 
+
+/**
+ * Utility for execute git commands.
+ */
+function _devshop_projects_git_execute($command, $root) {
+  // Execute
+  if (!empty($command)){
+     drush_log('[DEVSHOP] Running: ' . $command);
+
+    // @TODO: Create a d()->server->shell_cd_and_exec() function
+    //  server->shell_exec() uses escapeshellcmd(), so we cannot cd_and_exec!
+    // So instead, this is the code from d()->server->shell_exec
+    // d()->server->shell_exec($cmd);
+    if (provision_is_local_host(d()->server->remote_host)) {
+      drush_shell_cd_and_exec($root, escapeshellcmd($command));
+    }
+    else {
+      drush_shell_cd_and_exec($root, 'ssh ' . drush_get_option('ssh-options', '-o PasswordAuthentication=no') . ' %s %s', $this->script_user . '@' . d()->server->remote_host, escapeshellcmd($command));
+    }
+
+    $output = drush_shell_exec_output();
+    drush_log('Shell Output: ' . implode("\n", $output) , 'warning');
+    return $output;
+  }
+}

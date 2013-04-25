@@ -55,13 +55,8 @@ function devshop_projects_nodeapi(&$node, $op, $a3 = null) {
 
     // On Load: load this object's project and environment type
     if ($op == 'load'){
-      $data = db_fetch_array(db_query('SELECT d.project_nid, environment, n.title as project, git_url, git_branch FROM {hosting_devshop_project_object} d LEFT JOIN {node} n ON n.nid = d.project_nid LEFT JOIN {hosting_devshop_project} p ON n.nid = p.nid WHERE object_nid = %d', $node->nid));
+      $data = db_fetch_array(db_query('SELECT d.project_nid, environment, n.title as project, git_url, git_branch, d.drupal_path, d.clone_nid FROM {hosting_devshop_project_object} d LEFT JOIN {node} n ON n.nid = d.project_nid LEFT JOIN {hosting_devshop_project} p ON n.nid = p.nid WHERE object_nid = %d', $node->nid));
       return $data;
-    }
-
-    // On update or delete, delete the existing records.  We will replace below.
-    if ($op == 'update' || $op == 'delete') {
-      db_query('DELETE FROM {hosting_devshop_project_object} WHERE object_nid = %d', $node->nid);
     }
 
     // On insert or update, insert records saving this objects project and environment
@@ -71,13 +66,31 @@ function devshop_projects_nodeapi(&$node, $op, $a3 = null) {
         $project = hosting_context_load($node->project);
 
         // Save to table
-        db_query('INSERT INTO {hosting_devshop_project_object} (project_nid, object_nid, object_type, environment, git_branch) VALUES (%d, %d, "%s", "%s", "%s")', $project->nid, $node->nid, $node->type, $node->environment, $node->git_branch);
-        
+        $data = new stdClass();
+        $data->project_nid = $project->nid;
+        $data->object_nid = $node->nid;
+        $data->object_type = $node->type;
+        $data->environment = $node->environment;
+        $data->git_branch = $node->git_branch;
+        $data->drupal_path = $node->drupal_path;
+
+        //Site used for cloned the new site or platorm
+        if (isset($node->clone_nid)) {
+          $data->clone_nid = $node->clone_nid;
+        }
+
+        if ($op == 'insert') {
+          drupal_write_record('hosting_devshop_project_object', $data);
+        }
+        else {
+          drupal_write_record('hosting_devshop_project_object', $data, 'object_nid');
+        }
+
         //If we are updating or inserting a platform, update all sites with the correct git_branch and environment
         if ($node->type == 'platform') {
           $result = db_query("SELECT nid FROM {hosting_site} WHERE platform = %d", $node->nid);
           while ($site = db_fetch_object($result)) {
-            db_query('UPDATE {hosting_devshop_project_object} SET git_branch = "%s", environment = "%s" WHERE object_nid = %d', $node->git_branch, $node->environment, $site->nid);
+            db_query('UPDATE {hosting_devshop_project_object} SET git_branch = "%s", environment = "%s", drupal_path = "%s" WHERE object_nid = %d', $node->git_branch, $node->environment, $node->drupal_path, $site->nid);
           } 
         }
       }
@@ -115,6 +128,7 @@ function devshop_projects_insert($node) {
   $info->nid = $node->nid;
   $info->git_url = $node->git_url;
   $info->code_path = hosting_path_normalize($node->code_path);
+  $info->drupal_path = hosting_path_normalize($node->drupal_path);
   $info->base_url = $node->base_url;
   $info->install_profile = $node->install_profile;
   $info->live_domain = $node->live_domain;
@@ -150,6 +164,7 @@ function devshop_projects_update($node) {
   $info->nid = $node->nid;
   $info->git_url = $node->git_url;
   $info->code_path = hosting_path_normalize($node->code_path);
+  $info->drupal_path = hosting_path_normalize($node->drupal_path);
   $info->base_url = $node->base_url;
   $info->install_profile = $node->install_profile;
   $info->live_domain = $node->live_domain;

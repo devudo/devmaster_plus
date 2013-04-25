@@ -49,6 +49,22 @@ function devshop_projects_perm() {
  * Implementation of hook_menu()
  */
 function devshop_projects_menu() {
+  //Settings page.
+  $items['admin/hosting/devshop'] = array(
+    'title' => 'DevShop',
+    'description' => 'Default values for use in creation project',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('devshop_projects_settings_form'),
+    'access arguments' => array('administer projects'),
+    'file' => 'admin.inc',
+    'file path' => drupal_get_path('module', 'devshop_projects') . '/inc',
+    'type' => MENU_LOCAL_TASK,
+  );
+
+  $items['admin/hosting/devshop/projects'] = $items['admin/hosting/devshop'];
+  $items['admin/hosting/devshop/projects']['title'] = 'Projects';
+  $items['admin/hosting/devshop/projects']['type'] = MENU_DEFAULT_LOCAL_TASK;
+  $items['admin/hosting/devshop/projects']['tab_parent'] = 'admin/hosting/devshop';
 
   $items['hosting/projects'] = array(
     'title' => t('Projects'),
@@ -84,7 +100,7 @@ function devshop_projects_menu() {
     'file' => 'create-wizard.inc',
     'file path' => drupal_get_path('module', 'devshop_projects') . '/inc',
   );
-
+  
   // hosting tasks ajax pages.
   foreach (hosting_available_tasks('project') as $task => $info){
     $path = 'node/%/project_' . $task;
@@ -100,7 +116,6 @@ function devshop_projects_menu() {
     $items[$path] = array_merge($items[$path], $info);
   }
   
-  
   return ($items);
 }
 
@@ -109,7 +124,11 @@ function devshop_projects_menu() {
  * Implements hook_devshop_project_settings
  */
 function devshop_projects_devshop_project_settings($project_node = NULL){
-  $branch_options = array_combine((array) $project_node->git_branches, (array) $project_node->git_branches);
+  if (!empty($project_node->git_branches)){
+    $branch_options = array_combine($project_node->git_branches, $project_node->git_branches);
+  } else {
+    $branch_options = array();
+  }
   
   $settings = array();
   $settings['git_branch'] = array(
@@ -118,6 +137,29 @@ function devshop_projects_devshop_project_settings($project_node = NULL){
     '#type' => 'select',
     '#options' => $branch_options,
   );
+
+  $http_servers = hosting_get_servers('http');
+
+  if (count($http_servers)) {
+    $settings['web_server'] = array(
+      '#title' => t('Web server'),
+      '#node_type' => 'platform',
+      '#type' => 'select',
+      '#options' => $http_servers,
+    );
+  }
+
+  $db_servers = hosting_get_servers('db');
+
+  if (count($db_servers)) {
+    $settings['db_server'] = array(
+      '#title' => t('Database server'),
+      '#node_type' => 'site',
+      '#type' => 'select',
+      '#options' => $db_servers,
+    );
+  }
+
   return $settings;
 }
 
@@ -278,7 +320,7 @@ function devshop_project_status($node){
  * See http://drupal.org/project/hosting_drush_aliases
  */
 function devshop_projects_hosting_drush_aliases_name($node) {
-  if (isset($node->project_name)){
+  if (isset($node->project_name)) {
     return $node->project_name .".". $node->project_environment;
   }
 }
@@ -287,8 +329,7 @@ function devshop_projects_hosting_drush_aliases_name($node) {
  * Helper function to create a site in a project.
  * Used by Wizard & "Create Platform" > Post Verify
  */
-function devshop_projects_create_site($project_node, $platform_node, $platform_name) {
-
+function devshop_projects_create_site($project_node, $platform_node, $platform_name, $db_server = NULL) {
   global $user;
 
   // Create the site nodes
@@ -302,7 +343,8 @@ function devshop_projects_create_site($project_node, $platform_node, $platform_n
   // @TODO: better client & DB support
   $node->client = HOSTING_DEFAULT_CLIENT;
   $servers = hosting_get_servers('db');
-  $node->db_server = key($servers);
+  $server = $db_server ? $db_server : key($servers);
+  $node->db_server = $server;
 
   $node->platform = $platform_node->nid;
 
@@ -363,4 +405,19 @@ function _devshop_projects_project_has_module($node, $module) {
   }
   return _devshop_projects_site_has_module(node_load($sites['dev']), $module);
 }
- 
+
+ /*
+ * Delete a directory recursively
+ */
+function _devshop_rrmdir($dir) {
+  if (is_dir($dir)) { 
+     $objects = scandir($dir); 
+     foreach ($objects as $object) { 
+       if ($object != "." && $object != "..") { 
+         if (filetype($dir."/".$object) == "dir") _devshop_rrmdir($dir."/".$object); else unlink($dir."/".$object); 
+       } 
+     } 
+     reset($objects); 
+     rmdir($dir); 
+   } 
+} 

@@ -117,6 +117,15 @@ function devshop_projects_form(&$node) {
     '#maxlength' => 255,
     '#weight' => 2,
   );
+  $form['drupal_path'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Path to Drupal'),
+    '#description' => t('Enter the relative path to the index.php file in your repository. Leave blank if index.php is in the root.'),
+    '#size' => 40,
+    '#default_value' => $node->drupal_path,
+    '#maxlength' => 255,
+    '#weight' => 3,
+  );
   $form['base_url'] = array(
     '#type' => 'textfield',
     '#title' => t('Primary Domain'),
@@ -125,7 +134,7 @@ function devshop_projects_form(&$node) {
     '#size' => 40,
     '#default_value' => $node->base_url,
     '#maxlength' => 255,
-    '#weight' => 2,
+    '#weight' => 4,
   );
   
   // Unchanging Values
@@ -172,7 +181,7 @@ function devshop_projects_form(&$node) {
 
   // Don't allow editing
   if ($node->nid) {
-    $locked = array('title', 'git_url', 'code_path', 'base_url');
+    $locked = array('title', 'git_url', 'code_path', 'drupal_path', 'base_url');
     foreach ($locked as $field){
       $form[$field]['#value'] = $form[$field]['#default_value'];
       $form[$field]['#type'] = 'value';
@@ -207,6 +216,15 @@ function devshop_projects_submit_settings($form, &$form_state) {
       if (empty($nodes[$nid])){
         $nodes[$nid] = node_load($nid);
         $nodes[$nid]->no_verify = TRUE;
+      }
+
+      //If changed database then execute migrate task.
+      if ($setting_name == 'db_server' && $nodes[$nid]->{$setting_name} != $setting_value) {
+        $args['target_platform'] = $nodes[$nid]->platform;
+        $args['new_uri'] = $nodes[$nid]->title;
+        $args['new_db_server'] = $setting_value;
+
+        hosting_add_task($nid, 'migrate', $args);
       }
       $nodes[$nid]->{$setting_name} = $setting_value;
     }
