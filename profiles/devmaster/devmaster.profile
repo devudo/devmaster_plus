@@ -125,6 +125,8 @@ function devmaster_bootstrap() {
   variable_set('hosting_default_db_server', $db_node->nid);
   variable_set('hosting_own_db_server', $db_node->nid);
 
+  module_disable(array('bakery'));
+
   $node = new stdClass();
   $node->uid = 1;
   $node->title = 'Drupal';
