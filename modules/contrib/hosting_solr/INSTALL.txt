@@ -1,0 +1,1 @@
+Follow the next instructions: http://drupalcode.org/project/provision_solr.git/blob/HEAD:/INSTALL.txt

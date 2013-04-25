@@ -1,0 +1,242 @@
+<?php
+
+/**
+ * @file
+ * Solr of the Hosting Services API.
+ *
+ * Aegir introduces an object representation of the provisioned
+ * services that need to be implemented in both it's front end 
+ * and backend.
+ */
+
+define ('HOSTING_DEFAULT_SOLR_SERVER', 0);
+define ('HOSTING_DEFAULT_SOLR_PATH', '');
+
+/**
+ * @defgroup hostingserviceapi Frontend Service API
+ * @{
+ *
+ * The "service API" is what makes Aegir capable of managing multiple
+ * services like web or database servers. It provides a level of
+ * abstraction that allows different implementations of a specific
+ * service type.
+ */
+
+/**
+ * Expose a type of service to the Service API.
+ *
+ * Return a new type of service (such as http, dns, db etc.) to
+ * the service API.
+ *
+ * This information will be used to display the server node form,
+ * allowing you to create services of this type.
+ *
+ * Just defining a service type without any implementations of it,
+ * will automatically provide the "None" implementation.
+ *
+ * You will then need to create a new file in the same directory
+ * as your module named "$module.service.inc, containing at
+ * least a single class named "provisionService_$service", which
+ * extends the base provisionService class.
+ *
+ * @see hosting_server_services()
+ * @return
+ *    an associative array with the index declaring the service
+ *    type, and containing another associative array of properties.
+ *    At present only the 'title' property is required for display
+ *    of the server node form.
+ */
+function hosting_solr_hosting_service_type() {
+  return array(
+    'solr' => array(       // Machine name
+      'title' => t('Solr'), // Human-readable name
+      'weight' => 0,       // Optional, defaults to 0
+    ),
+  );
+}
+
+/**
+ * Expose a service implementation to the service API.
+ *
+ * Return a service implementation, such as the "apache" implementation
+ * of the "http" service.
+ *
+ * An implementation class should go in {module name}.service.inc and be must be
+ * named hostingService_{service type}_{type}, which should be a subclass of
+ * hostingService_{service type} or hostingService.
+ *
+ * You will then need to either extend the existing {module name}.service.inc
+ * file, or create a new file, containing the implementation of your service.
+ *
+ * @return
+ *   An associative array with the service implementation as key, and the
+ *   service type implemented as value.
+ *
+ * @see hosting_server_services()
+ */
+function hosting_solr_hosting_service() {
+  return array('tomcat' => 'solr');   // Service implementation => service type.
+}
+
+/**
+ * @} End of "defgroup hostingserviceapi".
+ */
+
+/**
+ * Implementation of hook_form_alter()
+ */
+function hosting_solr_form_alter(&$form, $form_state, $form_id) {
+  if ($form_id == 'site_node_form') {
+    $node = $form['#node'];
+
+    //Add selection server
+    $form['solr_server'] =  array(
+      '#type' => 'radios',
+      '#title' => t('Solr server'),
+      '#required' => TRUE,
+      '#description' => t('The solr server the site will use to host its content.'),
+      '#options' => array('None') + hosting_get_servers('solr'),
+      '#default_value' => $node->solr_server ? $node->solr_server : HOSTING_DEFAULT_SOLR_SERVER,
+    );
+
+    $form['solr_config_path'] = array(
+      '#type' => 'textfield',
+      '#title' => t('Path to solr config files'),
+      '#description' => t('Enter the path to the folder containing solr configuration files for this site (relative to the Drupal root).  At least solrconfig.xml and schema.xml must exist in this folder, but all files will be copied to this site\'s SOLR_HOME/conf folder. <em>eg. sites/all/modules/apachesolr/solr-conf/solr-3.x</em>'),
+      '#default_value' => $node->solr_config_path ? $node->solr_config_path : HOSTING_DEFAULT_SOLR_PATH,
+    );
+    array_push($form['#validate'], 'hosting_solr_form_validate');
+    return $form;
+  }
+}
+
+/**
+ * Form validation for site nodes: Check for solr config files.
+ */
+function hosting_solr_form_validate($form, &$form_state){
+  if ($form_state['values']['solr_server']){
+    $platform_nid = $form['#node']->platform ? $form['#node']->platform : $form_state['values']['platform'];
+    $platform = node_load($platform_nid);
+    $path_to_platform = $platform->publish_path;
+    
+    $path_to_schema = $path_to_platform . "/" . $form_state['values']['solr_config_path'] . '/schema.xml';
+    $path_to_config = $path_to_platform . "/" . $form_state['values']['solr_config_path'] . '/solrconfig.xml';
+    
+    if (empty($form_state['values']['solr_config_path'])){
+      form_set_error('solr_config_path', t('You must enter a path to your solr config files if you enabled a solr server.'));
+    }
+    elseif (!file_exists($path_to_schema) && !file_exists($path_to_config)){
+      form_set_error('solr_config_path', t('schema.xml and solrconfig.xml were not found at %path.  Please make sure schema.xml and solrconfig.xml exist in this folder.', array('%path' => $form_state['values']['solr_config_path'])));
+    } elseif (!file_exists($path_to_schema)){
+      form_set_error('solr_config_path', t('schema.xml was not found at %path.  Please make sure schema.xml exists in this folder.', array('%path' => $form_state['values']['solr_config_path'])));
+    } elseif (!file_exists($path_to_config)){
+      form_set_error('solr_config_path', t('solrconfig.xml was not found at %path.  Please make sure solrconfig.xml exists in this folder.', array('%path' => $form_state['values']['solr_config_path'])));
+    }
+  }
+}
+
+/**
+ * Clean title for use with solr
+*/ 
+function hosting_solr_suggest_solr_core_name($uri) {
+
+  $suggest_base = $uri;
+
+  return $suggest_base;
+}
+
+/**
+ * Function for operation nodeapi view
+ */
+function hosting_solr_view(&$node) {
+  if ($node->solr_server) {
+    $server = node_load($node->solr_server);
+
+   $link = 'http://'. $server->title .':8080/'. hosting_solr_suggest_solr_core_name($node->title);
+
+    $node->content['info']['solr_hostname'] = array(
+      '#type' => 'item',
+      '#title' => t('Solr URL'),
+      '#value' => l($link, $link),
+      '#weight' => 22,
+    );
+    $node->content['info']['solr_server'] = array(
+      '#type' => 'item',
+      '#title' => t('Solr server'),
+      '#value' => _hosting_node_link($node->solr_server),
+    );
+    
+    $node->content['info']['db_server']['#weight'] = -2;
+    $node->content['info']['solr_server']['#weight'] = -1;
+  }
+}
+
+/** 
+ * Function for operation nodeapi insert
+ */
+function hosting_solr_insert($node) {
+  if ($node->solr_server) {
+    db_query("INSERT INTO {hosting_solr} (vid, nid, server, path) VALUES (%d, %d, %d, '%s')", $node->vid, $node->nid, $node->solr_server, $node->solr_config_path);
+  }
+}
+
+/**
+ * Function for operation nodeapi update
+ */
+function hosting_solr_update($node) {
+  db_query("UPDATE {hosting_solr} SET server=%d, path='%s' WHERE nid = %d", $node->solr_server, $node->solr_config_path, $node->nid);
+}
+
+/**
+ * Function for operation nodeapi delete
+ */
+function hosting_solr_delete($node) {
+  db_query("DELETE FROM {hosting_solr} WHERE nid = %d", $node->nid);
+}
+
+/**
+ * Function for operation nodeapi delete revision
+ */
+function hosting_solr_delete_revision($node) {
+  db_query("DELETE FROM {hosting_solr} WHERE vid = %d", $node->vid);
+}
+
+/** 
+ * Implementation of hook_nodeapi()
+ */
+function hosting_solr_nodeapi(&$node, $op, $a3 = NULL, $a4 = NULL) {
+  if ($node->type == 'site') {
+    switch ($op) {
+    case 'view':
+        hosting_solr_view($node);
+        break;
+    case 'insert':
+        hosting_solr_insert($node);
+        break;
+      case 'update':
+        // if there is already an entry, update it. If the solr module has been activate later on and the site
+        // has already existing, this special case needs to be tracked.
+        if (!db_result(db_query("SELECT server FROM {hosting_solr} WHERE vid=%d", $node->vid))) {
+          hosting_solr_insert($node);
+        }
+        else {
+          // otherwise create it
+          hosting_solr_update($node);
+        }
+        break;
+      case 'delete' :
+        hosting_solr_delete($node);
+        break;
+      case 'delete revision':
+        hosting_solr_delete_revision($node);
+        break;
+      case 'validate' :
+        break;
+      case 'load':
+        $additions = db_fetch_array(db_query("SELECT server AS solr_server, path AS solr_config_path FROM {hosting_solr} WHERE vid=%d  ORDER BY solr_server DESC LIMIT 1", $node->vid));
+        return $additions;
+        break;
+    }
+  }
+}
+
