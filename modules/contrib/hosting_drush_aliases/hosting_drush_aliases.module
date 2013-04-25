@@ -1,0 +1,83 @@
+<?php
+/**
+ * @file hosting_drush_aliases.module
+ */
+
+/**
+ * Implements hook_menu()
+ */
+function hosting_drush_aliases_menu() {
+  $items = array();
+
+  $items['aliases'] = array(
+    'title' => 'Download Drush Aliases', 
+    'page callback' => 'hosting_drush_aliases_page', 
+    'access arguments' => array('access hosting drush aliases'), 
+  );
+  return $items;
+}
+
+/**
+ * Implements hook_perm()
+ */
+function hosting_drush_aliases_perm() {
+  return array('access hosting drush aliases');
+}
+/**
+ * Menu Callback for /aliases.drushrc.php
+ */
+function hosting_drush_aliases_page($server = NULL){
+  
+  // If no server specified, provide a list
+  if (!$server){
+    $items = array();
+    $query = db_query('SELECT title, nid FROM {node} WHERE type = "server" AND status = 1 ORDER BY title desc');
+    while ($result = db_fetch_object($query)){
+      // Load the server to detect the http service
+      $node = node_load($result->nid);
+      if (isset($node->services['http'])){
+        $items[] = l($result->title, "aliases/$result->title/aliases.drushrc.php");
+      }
+    }
+    // If only one, set $server and continue
+    if (count($items) == 1){
+      $server = $result->title;
+    } else {
+      return theme('item_list', $items);
+    }
+  }
+  
+  // Server is specified: Find all sites
+  $query = db_query(
+    'SELECT title AS uri, publish_path AS root, n.nid
+      FROM {node} n
+        LEFT JOIN {hosting_site} hs ON n.nid = hs.nid
+        LEFT JOIN {hosting_platform} hp ON hs.platform = hp.nid
+        WHERE n.type = "site" AND n.status = 1 ORDER BY title desc'
+  );
+  $output_aliases = '';
+  while ($result = db_fetch_array($query)){
+    // Load site for the hook
+    $site_node = node_load($result['nid']);
+    
+    // Add to and remove items from alias array
+    unset($result['nid']);
+    $result['remote-host'] = $server;
+    $result['remote-user'] = variable_get('hosting_drush_aliases_remote_user', 'aegir');
+    
+    // Generate alias name
+    $names_options = module_invoke_all('hosting_drush_aliases_name', $site_node);
+    $alias_name = empty($names_options)? $result['uri']: array_pop($names_options);
+    
+    // Create output
+    $output_aliases .= "\$aliases['$alias_name'] = " .  var_export($result, 1) . ';';
+    $output_aliases .= "\n";
+  }
+  
+  header("Content-type: text/plain");
+  header('Content-Disposition: attachment; filename="aliases.drushrc.php"');
+  $output .= "<?php\n";
+  $output .= $output_aliases;
+  print $output;
+  exit;
+}
