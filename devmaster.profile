@@ -79,7 +79,6 @@ function devmaster_bootstrap() {
   $client_id = $node->nid;
 
   /* Default server */
-  // @TODO: Create new Rackspace cloud server
   $node = new stdClass();
   $node->uid = 1;
   $node->type = 'server';
@@ -192,7 +191,7 @@ function devmaster_bootstrap() {
   variable_set('site_frontpage', 'devshop');
 
   // Set the sitename
-  variable_set('site_name', 'DevShop');
+  variable_set('site_name', 'DEVUDO DevShop');
 
   // do not allow user registration: the signup form will do that
   variable_set('user_register', 0);
@@ -213,9 +212,18 @@ function devmaster_task_finalize() {
   $item = db_fetch_array(db_query("SELECT * FROM {menu_links} WHERE mlid = %d", $items[0]['mlid']));
   $item['menu_name'] = $menu_name;
   $item['customized'] = 1;
+  $item['weight'] = 3;
   $item['options'] = unserialize($item['options']);
   install_menu_update_menu_item($item);
-
+  
+  $items = install_menu_get_items('hosting/servers');
+  $item = db_fetch_array(db_query("SELECT * FROM {menu_links} WHERE mlid = %d", $items[0]['mlid']));
+  $item['menu_name'] = $menu_name;
+  $item['customized'] = 1;
+  $item['weight'] = 2;
+  $item['options'] = unserialize($item['options']);
+  install_menu_update_menu_item($item);
+  
   $items = install_menu_get_items('user');
   $item = db_fetch_array(db_query("SELECT * FROM {menu_links} WHERE mlid = %d", $items[0]['mlid']));
   $item['menu_name'] = $menu_name;
@@ -227,6 +235,7 @@ function devmaster_task_finalize() {
   $item = db_fetch_array(db_query("SELECT * FROM {menu_links} WHERE mlid = %d", $items[0]['mlid']));
   $item['menu_name'] = $menu_name;
   $item['customized'] = 1;
+  $item['weight'] = 1;
   $item['options'] = unserialize($item['options']);
   install_menu_update_menu_item($item);
 
