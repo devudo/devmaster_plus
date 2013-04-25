@@ -8,7 +8,6 @@ projects[devshop_hosting][download][type] = "git"
 projects[devshop_hosting][type] = "module"
 
 ; Contrib modules
-projects[admin_menu][type] = "module"
 projects[adminrole][type] = "module"
 projects[ctools][type] = "module"
 projects[hosting_drush_aliases][type] = "module"
