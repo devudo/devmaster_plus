@@ -234,9 +234,20 @@ function hosting_solr_nodeapi(&$node, $op, $a3 = NULL, $a4 = NULL) {
         break;
       case 'load':
         $additions = db_fetch_array(db_query("SELECT server AS solr_server, path AS solr_config_path FROM {hosting_solr} WHERE vid=%d  ORDER BY solr_server DESC LIMIT 1", $node->vid));
+        
+        $server = node_load($additions['solr_server']);
+        $additions['solr_war_path'] = $server->solr_war_path;
         return $additions;
         break;
     }
   }
 }
 
+
+/** 
+ * Implementation of hook_nodeapi()
+ */
+function hosting_solr_nodeapi_server_load(&$node){
+  // @TODO: Store this in the database per server.
+  return array('solr_war_path' => variable_get('hosting_solr_default_solr_war_path', '/usr/share/solr.war'));
+}
