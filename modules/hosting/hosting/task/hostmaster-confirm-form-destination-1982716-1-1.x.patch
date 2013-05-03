@@ -1,0 +1,14 @@
+diff --git a/modules/hosting/task/hosting_task.module b/modules/hosting/task/hosting_task.module
+index 3772b81..3cc6453 100644
+--- a/modules/hosting/task/hosting_task.module
++++ b/modules/hosting/task/hosting_task.module
+@@ -399,7 +399,8 @@ function hosting_task_confirm_form($form_state, $node, $task) {
+     $form['#func_param_2'] = $task;
+   }
+   $question = t("Are you sure you want to @task @object?", array('@task' => $task, '@object' => $node->title));
+-  $form = confirm_form($form, $question, 'node/' . $node->nid, '', $tasks[$task]['title']);
++  $path = !empty($_GET['destination'])? $_GET['destination']: 'node/' . $node->nid;
++  $form = confirm_form($form, $question, $path, '', $tasks[$task]['title']);
+ 
+   // add an extra class to the actions to allow us to disable the cancel link via javascript for the modal dialog
+ 
