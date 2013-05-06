@@ -40,22 +40,6 @@ function hosting_site_menu() {
     'description' => 'Display a list of sites',
     'page callback' => 'hosting_sites',
     'access arguments' => array('view site'),
-    'type' => MENU_NORMAL_ITEM,
-  );
-
-  $items['hosting/sites/list'] = array(
-    'title' => 'List',
-    'type' => MENU_DEFAULT_LOCAL_TASK,
-    'weight' => -10,
-  );
-
-  $items['hosting/sites/add'] = array(
-    'title' => 'Add site',
-    'type' => MENU_LOCAL_TASK,
-    'page callback' => 'drupal_goto',
-    'page arguments' => array('node/add/site'),
-    'access callback' => 'node_access',
-    'access arguments' => array('create', 'site'),
   );
 
   $items['hosting/hosting_site_form_check'] = array(
@@ -102,40 +86,10 @@ function hosting_site_node_load($arg) {
 }
 
 /**
- * Get all possible filters types that could be applied to the site list.
- *
- * This list will be used to sanitise the selected filters in the query string.
- *
- * @return
- *   An array of the possible filters.
- */
-function hosting_site_get_possible_site_list_filters() {
-  $filters = module_invoke_all('hosting_site_site_list_filters');
-  if (!is_array($filters)) {
-    $filters = array();
-  }
-  drupal_alter('hosting_site_site_list_filters', $filters);
-  return $filters;
-}
-
-/**
  * Page handler for displaying list of hosted sites on front page
  */
 function hosting_sites() {
-  $filter_by = isset($_GET['filter_by']) ? $_GET['filter_by'] : NULL;
-  $filter_value = isset($_GET['filter_value']) ? $_GET['filter_value'] : NULL;
-  // Now, we need to be incredibly careful with what values of $filter_by and
-  // $filter_value that we let through. First ensure that $filter_by is one of
-  // the possible values that we send through.
-  if (!in_array($filter_by, hosting_site_get_possible_site_list_filters(), TRUE)) {
-    $filter_by = NULL;
-  }
-  // Now ensure that $filter_value is numeric.
-  if (!is_numeric($filter_value)) {
-    $filter_value = NULL;
-  }
-
-  if ($list = drupal_get_form('hosting_site_list_form', $filter_by, $filter_value)) {
+  if ($list = drupal_get_form('hosting_site_list_form')) {
     return $list;
   }
   $create_site_link = l(t('Create a site now?'), 'node/add/site');
@@ -149,7 +103,7 @@ function hosting_sites() {
  */
 function _hosting_site_goto_link($node) {
   $cache = cache_get("hosting:site:" . $node->nid . ":login_link");
-  if ($cache && (time() < $cache->data['expire'])) {
+  if (!is_null($cache) && (time() < $cache->data['expire'])) {
     $title = t("Log in to !url" , array('!url' => $node->title));
   }
   else {
@@ -276,12 +230,12 @@ function hosting_site_hosting_tasks() {
     'dialog' => TRUE,
   );
 
-  $tasks['site']['login-reset'] = array(
+  $tasks['site']['login_reset'] = array(
      'title' => t('Reset password'),
      'description' => t('Generate a one-time login reset url for this site.'),
   );
 
-  $tasks['site']['backup-delete'] = array(
+  $tasks['site']['backup_delete'] = array(
      'title' => t('Delete backups'),
      'description' => t('Delete one or more backup files of a site.'),
      'dialog' => TRUE,
@@ -424,6 +378,9 @@ function hosting_import_site($site_id, $data, $platform) {
 
   if ($data['client_name']) {
     $client = hosting_import_client($data['client_name']);
+  } elseif ($data['client_email']) { 
+    // @deprecated drop this after 1.x
+    $client = hosting_import_client($data['client_email']);
   } 
 
   $site = node_load($site_id);
@@ -434,7 +391,8 @@ function hosting_import_site($site_id, $data, $platform) {
   $site->platform = $platform;
   $site->no_verify = TRUE;
   $site->verified = time();
-  $site->client = $client->nid ? $client->nid : HOSTING_DEFAULT_CLIENT;
+  $site->client = $client->nid;
+  $site->ip_addresses = array_values($data['site_ip_addresses']);
   $site->cron_key = ($data['cron_key']) ? $data['cron_key'] : '';
 
   $site->aliases = ($data['aliases']) ? $data['aliases'] : array();
@@ -487,6 +445,16 @@ function _hosting_site_status($node) {
     HOSTING_SITE_DISABLED => "Disabled",
   );
   return $labels[$status];
+}
+
+/**
+ * Check if a site exists in a somehow wrong way
+ *
+ * @see hosting_domain_allowed()
+ * @deprecated
+ */
+function hosting_site_exists($url, $nid = null) {
+  return !hosting_domain_allowed($url, array('nid' => $nid));
 }
 
 /**
@@ -593,17 +561,7 @@ function hosting_site_list_form($form_state, $filter_by = NULL, $filter_value = 
     $form['sites'] = array('#type' => 'checkboxes', '#options' => $sites);
     $form['pager'] = array('#value' => theme('pager', NULL, 25, 1));
     $form['#theme'] = 'hosting_site_list';
-    $query = array();
-    if (isset($_GET['page'])) {
-      $query['page'] = $_GET['page'];
-    }
-    if (isset($filter_by)) {
-      $query['filter_by'] = $filter_by;
-    }
-    if (isset($filter_value)) {
-      $query['filter_value'] = $filter_value;
-    }
-    $form['#action'] = url('hosting/sites', array('query' => $query));
+    $form['#action'] = url('hosting/sites');
     return $form;
   }
   elseif ($step == 2) {
