@@ -60,41 +60,18 @@ function hook_hosting_site_options_alter(&$return, $node) {
 }
 
 /**
- * Defines which filters are allowed to be used on the hosting site list.
- *
- * The list of sites can be filtered via the query string, and to avoid nasty
- * security exploits you must explicitly define what people can filter by.
- *
- * @return
- *   An array of possible filter strings.
- *
- * @see hosting_site_get_possible_site_list_filters()
- * @see hosting_sites()
- * @see hook_hosting_site_site_list_filters_alter()
+ * @see hosting_task_confirm_form()
+ * @see hosting_site_list_form()
  */
-function hook_hosting_site_site_list_filters() {
-  // From hosting_platform.
-  return array('platform');
+function hosting_task_TASK_TYPE_form($node) {
+
 }
 
 /**
- * Alters which filters are allowed to be used on the hosting site list.
- *
- * The list of sites can be filtered via the query string, and to avoid nasty
- * security exploits you must explicitly define what people can filter by.
- *
- * @param $filters
- *   The array of filters defined by other modules.
- *
- * @see hosting_site_get_possible_site_list_filters()
- * @see hosting_sites()
- * @see hook_hosting_site_site_list_filters()
+ * @see hosting_task_confirm_form()
  */
-function hook_hosting_site_site_list_filters_alter(&$filters) {
-  // Add a filter based on another module.
-  if (in_array('other_filter', $filters, TRUE)) {
-    $filters[] = 'my_filter';
-  }
+function hosting_task_TASK_TYPE_form_validate() {
+
 }
 
 /**

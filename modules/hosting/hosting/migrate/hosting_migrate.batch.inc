@@ -159,6 +159,7 @@ function hosting_migrate_platform_submit($form, &$form_state) {
         }
       }
       break;
+
     case 2:
       // Create a task node for logging purposes.
       $current = $form_state['storage']['current_platform'];

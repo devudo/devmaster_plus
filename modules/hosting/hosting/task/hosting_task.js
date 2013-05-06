@@ -8,14 +8,7 @@ hostingTaskRefreshList = function() {
     if (Drupal.settings.hostingTaskRefresh.changed < data.changed) {
       // only reload if there is no modal frame currently open
       if ($(document).data('hostingOpenModalFrame') != true) {
-        // If a specific URL was specified, go there.
-        if (data.navigate_url) {
-          document.location = data.navigate_url;
-        }
-        // Fall back to just doing a reload of the current page.
-        else {
-          document.location.reload();
-        }
+        document.location.reload();
       }
     }
     else {
@@ -27,7 +20,7 @@ hostingTaskRefreshList = function() {
   }
  
   hostingTaskAddOverlay('#hosting-task-list');
-  $.get(Drupal.settings.basePath + 'hosting/tasks/' + Drupal.settings.hostingTaskRefresh.nid + '/list', null, hostingTaskListRefreshCallback , 'json' );
+  $.get('/hosting/tasks/' + Drupal.settings.hostingTaskRefresh.nid + '/list', null, hostingTaskListRefreshCallback , 'json' );
 }
 
 
@@ -49,7 +42,7 @@ function hostingTaskRefreshQueueBlock() {
   }
  
   hostingTaskAddOverlay('#hosting-task-queue-block');
-  $.get(Drupal.settings.basePath + 'hosting/tasks/queue', null, hostingTaskQueueRefreshCallback , 'json' );
+  $.get('/hosting/tasks/queue', null, hostingTaskQueueRefreshCallback , 'json' );
 }
 
 $(document).ready(function() {
@@ -70,7 +63,7 @@ hostingTaskBindButtons = function(elem) {
   $('.hosting-button-dialog', elem).click(function() {
       $(document).data('hostingOpenModalFrame', true)
      var options = {
-        url : Drupal.settings.basePath + 'hosting/js' + $(this).attr('href'),
+        url : '/hosting/js' + $(this).attr('href'),
         draggable : false,
         width : 600,
         height : 150,

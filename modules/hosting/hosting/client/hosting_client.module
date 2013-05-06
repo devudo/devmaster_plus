@@ -132,6 +132,29 @@ function hosting_get_client_by_uname($uname) {
 }
 
 /**
+ * Get a client by email
+ *
+ * This is really a shortcut to node_load()
+ *
+ * @see node_load()
+ * @see hosting_get_client()
+ * @deprecated the email field and therefore this function will be
+ *   completely dropped in 2.x. this may not even work at all as the
+ *   email field will not be populated on new sites. use
+ *   hosting_get_client() instead
+ */
+function hosting_get_client_by_email($email) {
+  $caller = next(debug_backtrace());
+  trigger_error(t("@function() is deprecated and may yield undefined results, replace with @newfunction(), called from @caller in @file", array('@file' => $caller['file'] . ':' . $caller['line'], '@caller' => $caller['function'], '@function' => __FUNCTION__, '@newfunction' => 'hosting_get_client')), E_USER_DEPRECATED);
+
+  $result = db_result(db_query("SELECT c.nid FROM {hosting_client} c INNER JOIN {node} n ON n.nid = c.nid WHERE c.email = '%s'", $email));
+  if ($result) {
+    return node_load($result);
+  }
+  return false;
+}
+
+/**
  * Implementation of hook_form().
  */
 function hosting_client_form(&$node) {
@@ -324,7 +347,7 @@ function _hosting_client_get_role() {
 function hosting_client_register_user($node) {
   $pass = user_password();
   $user = new stdClass();
-  $edit['name'] = $node->uname;
+  $edit['name'] = $node->email;
   $edit['hosting_client'] = $node->nid;
   $edit['mail'] = $node->email;
   $edit['pass'] = $pass;
@@ -387,7 +410,8 @@ function hosting_client_update($node) {
     } else {
       $node->uname = hosting_client_sanitize($node->title);
     }
-    db_query("UPDATE {hosting_client} SET uname='%s' WHERE nid=%d", $node->uname, $node->nid);
+    db_query("UPDATE {hosting_client} SET nid=%d, uname='%s' WHERE vid=%d",
+             $node->nid, $node->uname, $node->vid);
   }
   if ($node->users) {
     foreach ($node->users as $user) {
@@ -523,22 +547,26 @@ function hosting_client_view($node, $teaser = FALSE, $page = FALSE) {
 }
 
 /**
- * Implements hook_hosting_site_site_list_filters().
- */
-function hosting_client_hosting_site_site_list_filters() {
-  return array('client');
-}
-
-/**
  * Helper function to generate new client node during import.
  *
  * @param $name
- *   Client name.
+ *   Client email address or name.
+ * @param $organization
+ *   Client name, title, organization or machine name - deprecated.
  * @return
  *   The nid of the generated client.
+ * @deprecated the organization and email parameters will be dropped
+ *   in 2.x in favor of the name parameter, which will become the
+ *   sole argument.
  */
-function hosting_import_client($name) {
+function hosting_import_client($name, $organization = '') {
   $client = hosting_get_client_by_uname($name);
+  if (!$client) {
+    $client = hosting_get_client($name);
+  }
+  if (!$client) {
+    $client = hosting_get_client_by_email($name);
+  }
 
   if (!$client) {
     $client = new stdClass();

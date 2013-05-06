@@ -263,11 +263,7 @@ function hook_provision_args($task, $task_type) {
  * Perform actions when a task has completed succesfully.
  *
  * Replace TASK_TYPE with the type of task that if completed you will be
- * notified of. This is a good place to hook in and record changes in the
- * frontend as a result of the task executing in the backend. If you just want
- * to hook into the backend then you probably want to consider using the
- * 'standard' Drush hooks there, i.e. host_post_provision_verify(),
- * hook_post_provision_install() etc.
+ * notified of.
  *
  * @param $task
  *   The hosting task that has completed.
@@ -305,10 +301,10 @@ function hook_post_hosting_TASK_TYPE_task($task, $data) {
  * module to determine which items it wishes to process.
  *
  * If you wish to process multiple items at the same time you will need to fork
- * the process by calling drush_invoke_process() with the 'fork' option,
- * specifying a drush command with the arguments required to process your task.
- * Otherwise you can do all your processing in this function, or similarly call
- * drush_invoke_process() without the 'fork' option.
+ * the process by calling drush_backend_fork(), specifying a drush command with
+ * the arguments required to process your task. Otherwise you can do all your
+ * processing in this function, or similarly call drush_backend_invoke(), which
+ * won't fork the process.
  *
  * @param $count
  *   The maximum number of items to process.
@@ -323,7 +319,7 @@ function hosting_QUEUE_TYPE_queue($count = 5) {
   drush_log(dt("Running tasks queue"));
   $tasks = _hosting_get_new_tasks($count);
   foreach ($tasks as $task) {
-    drush_invoke_process('@self', "hosting-task", array($task->nid), array(), array('fork' => TRUE));
+    drush_backend_fork("hosting-task", array($task->nid));
   }
 }
 

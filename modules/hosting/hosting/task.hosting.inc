@@ -59,11 +59,8 @@ function drush_hosting_task_validate($id, $type = null) {
     $task->executed = time();
     /* if not already running, remove the task from the queue
      * this is to avoid concurrent task runs */
-    if ($task->task_status == HOSTING_TASK_PROCESSING && !drush_get_option('force', false)) {
-      return drush_set_error('HOSTING_TASK_RUNNING', dt("This task is already running, use --force"));
-    }
-    if ($task->task_status != HOSTING_TASK_QUEUED && !drush_get_option('force', false)) {
-      return drush_set_error('HOSTING_TASK_NOT_QUEUED', dt("This task is not queued, use --force"));
+    if ($task->task_status == HOSTING_TASK_PROCESSING) {
+      return drush_set_error('HOSTING_TASK_RUNNING', dt("This task is already running"));
     }
     $task->task_status = HOSTING_TASK_PROCESSING;
     $task->revision = TRUE;
@@ -114,37 +111,20 @@ function drush_hosting_task() {
       call_user_func($function, $task);
     }
 
-    $output = drush_invoke_process('@none', 'provision-save', array('@' . $task->ref->hosting_name), $task->context_options, array('method' => $mode));
+    $output = drush_backend_invoke_args('provision-save', array('@' . $task->ref->hosting_name), $task->context_options, $mode);
   }
  
-  // Run the actual command. Adding alias here to work around Drush API.
+  // Run the actual command. Adding alias here to work aorund Drush API.
   $output = provision_backend_invoke($task->ref->hosting_name, 'provision-' . $task->task_type, $task->args, $task->options, $mode);
   drush_set_context('HOSTING_DRUSH_OUTPUT', $output);
-
-  // Get any errors logged by Drush.
   $code = drush_get_error();
-
-  // Parse output for warnings, since these aren't logged by Drush.
-  $warning = FALSE;
-  foreach ($output['log'] as $entry) {
-    if ($entry['type'] == 'warning') {
-      $warning = TRUE;
-    }
-  }
-
-  if ($code) {
-    $task->task_status = HOSTING_TASK_ERROR;
-  }
-  elseif ($warning) {
-    $task->task_status = HOSTING_TASK_WARNING;
-  }
-  else {
-    $task->task_status = HOSTING_TASK_SUCCESS;
-  }
+ 
+  // We return 0 on success, so anything else is an error.
+  $task->task_status = ($code) ? HOSTING_TASK_ERROR : HOSTING_TASK_SUCCESS;
 
   // On succesful delete, remove the named context.
   if ($task->task_type === 'delete' && $task->task_status === HOSTING_TASK_SUCCESS) {
-    $output = drush_invoke_process('@none', 'provision-save', array('@' . $task->ref->hosting_name), array('delete' => TRUE), array('method' => $mode));
+    $output = drush_backend_invoke_args('provision-save', array('@' . $task->ref->hosting_name), array('delete' => TRUE), $mode);
   }
 
   // New revision is created at the beginning of function.

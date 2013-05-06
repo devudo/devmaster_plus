@@ -39,7 +39,7 @@ class hostingService_db_mysql extends hostingService_db {
     }
     $form['db_passwd'] = array(
       '#type' => 'password_confirm',
-      '#required' => FALSE,
+      '#required' => ($this->db_passwd) ? FALSE : $this->available,
       '#description' => $passwd_description . t('The password for the user that will be used to create new mysql users and databases for new sites'),
       '#size' => 30,
       '#weight' => 10

@@ -100,10 +100,6 @@ function hosting_js_page() {
   $args = func_get_args();
   $path = implode('/', $args);
 
-  // Incase Aegir is running in a sub-directory the base_path should be stripped away here
-  //    Remove the leading slash from base_path as $path doesn't have one either
-  $path = str_replace(ltrim(base_path(), '/'), '', $path);
-
   menu_set_active_item($path);
 #  $_SERVER['REQUEST_URI'] = str_replace('/hosting/js', '', $_SERVER['REQUEST_URI']);
 
@@ -193,7 +189,7 @@ function hosting_nodeapi(&$node, $op, $arg1, $arg2) {
   if (in_array($node->type, hosting_context_node_types())) {
     switch ($op) {
       case 'presave':
-        if (!isset($node->uid)) {
+        if (!$node->uid) {
           $node->uid = $user->uid;
         }
         break;
@@ -463,32 +459,26 @@ function _hosting_setup_cron() {
   exec('crontab -l 2> /dev/null', $cron);
   variable_set('hosting_cron_backup', $cron);
   if (sizeof($cron)) {
-    drush_log(dt("Replacing existing crontab"), 'warning');
+    drush_log("Your existing cron entry will be replaced.", 'warning');
+    exec('crontab -r 2> /dev/null');
+    $cron = array();
   }
   else {
     drush_log(dt("No existing crontab was found"), 'message');
   }
 
-  $cron = hosting_queues_cron_cmd();
+  $cron[] = hosting_queues_cron_cmd();
 
-  $fp = popen('crontab -', 'w');
-  $success = TRUE;
-  if ($fp) {
-    if (fwrite($fp, $cron) && fwrite($fp, "\n")) {
-      drush_log(dt("Installed hosting-dispatch cron entry to run every minute"), 'success');
-    } else {
-      $success = FALSE;
-    }
-    // pclose returns shell exit codes (ie. 0 is success)
-    if (pclose($fp)) {
-      $success = FALSE;
-    }
-  } else {
-    $success = FALSE;
+  $tmpnam = tempnam('hostmaster', 'hm.cron');
+  $fp = fopen($tmpnam, "w");
+  foreach ($cron as $line) {
+    fwrite($fp, $line . "\n");
   }
-  if (!$success) {
-    drush_set_error('PROVISION_CRON_FAILED', dt('Failed to install cron job'));
-  }
+  fclose($fp);
+  system(sprintf('crontab %s', escapeshellarg($tmpnam)));
+  unlink($tmpnam);
+  drush_log(dt("Installed hosting-dispatch cron entry to run every minute"), 'message');
+  return null;
 }
 
 /**
@@ -640,9 +630,6 @@ function hosting_queues_configure() {
         '#maxlength' => 3,
         '#default_value' => $info['items'],
         '#suffix' => t(' %items every ', array('%items' => $info['plural'])),
-        '#attributes' => array(
-          'class' => 'hosting-select-frequency-items'
-        ),
       );
     }
     foreach (array_reverse(array_keys($units)) as $length) {
@@ -658,18 +645,12 @@ function hosting_queues_configure() {
       '#type' => 'textfield',
       '#default_value' => $frequency_ticks,
       '#maxlength' => 5,
-      '#size' => 5,
-      '#attributes' => array(
-        'class' => 'hosting-select-frequency-ticks'
-      ),
+      '#size' => 5
     );
     $form[$queue]['frequency']["unit"] = array(
       '#type' => 'select',
       '#options' => $units,
       '#default_value' => $frequency_length,
-      '#attributes' => array(
-        'class' => 'hosting-select-frequency-unit'
-      ),
     );
   }
   $form['help'] = array(
@@ -855,7 +836,6 @@ function hosting_context_register($nid, $name) {
  *   The nid of the node to remove the association from.
  */
 function hosting_context_delete($nid) {
-  db_query("DELETE FROM {url_alias} WHERE src='node/%d'", $nid);
   db_query("DELETE FROM {hosting_context} WHERE nid=%d", $nid);
 }
 
@@ -871,9 +851,6 @@ function hosting_context_delete($nid) {
  */
 function hosting_context_name($nid) {
   $node = node_load($nid);
-  if (!$node) {
-    drupal_set_message(t('Error: cannot load node id %nid to find its context', array('%nid' => $nid)), 'error');
-  }
   return '@' . $node->hosting_name;
 }
 
@@ -905,24 +882,6 @@ function hosting_settings() {
     '#weight' => 0,
   );
 
-  $profiles = array();
-  foreach (hosting_get_profiles() as $id => $name) {
-    $profile = hosting_package_instance_load(array('p.nid' => $id));
-    $profiles[$profile->short_name] = "{$name} ({$profile->short_name})";
-    // Don't allow a site to be provisioned with hostslave or hostmaster profile
-    if (in_array($name, array('Hostslave', 'Hostmaster'))) {
-      unset($profiles[$profile->short_name]);
-    }
-  }
-  natcasesort($profiles);
-  $default_value = hosting_package_instance_load(array('p.nid' => hosting_get_default_profile()))->short_name;
-  $form['hosting_default_profile'] = array(
-    '#type' => 'select',
-    '#title' => t('Default profile'),
-    '#options' => $profiles,
-    '#description' => t('The default install profile to use when creating new sites.'),
-    '#default_value' => $default_value,
-  );
   $form['hosting_ignore_default_profiles'] = array(
     '#type' => 'checkbox',
     '#title' => t('Hide platforms with non-default profiles'),

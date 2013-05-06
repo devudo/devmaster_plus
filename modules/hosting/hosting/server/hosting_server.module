@@ -21,28 +21,11 @@ function hosting_server_node_info() {
  */
 function hosting_server_menu() {
   $items = array();
-
   $items['hosting/servers'] = array(
     'title' => 'Servers',
     'description' => 'List of servers',
     'page callback' => 'hosting_server_listing',
     'access arguments' => array('view server'),
-    'type' => MENU_NORMAL_ITEM,
-  );
-  
-  $items['hosting/servers/list'] = array(
-    'title' => 'List',
-    'type' => MENU_DEFAULT_LOCAL_TASK,
-    'weight' => -10,
-  );
-
-  $items['hosting/servers/add'] = array(
-    'title' => 'Add server',
-    'type' => MENU_LOCAL_TASK,
-    'page callback' => 'drupal_goto',
-    'page arguments' => array('node/add/server'),
-    'access callback' => 'node_access',
-    'access arguments' => array('create', 'server'),
   );
 
   return $items;
@@ -233,51 +216,19 @@ function hosting_server_form(&$node) {
     '#weight' => -10
   );
 
+  $form['ip_addresses'] = array(
+      '#type' => 'textarea',
+      '#title' => t('Ip addresses'),
+      '#description' => t('A list of IP addresses this server is publicly available under, one per line. If none is specified, a DNS lookup will be performed based on the server hostname above. <br /><strong>This should point to the public network, if you have such a separation.</strong>'),
+      '#default_value' => implode("\n", _hosting_ip_list($node->ip_addresses)),
+      '#weight' => -9,
+    );
+
+
   $form['services'] = array('#weight' => -5, '#tree' => TRUE);
 
   if (!$node->nid) {
     $node->services = array();
-  }
-
-  // taken mostly from the hosting_site alias stuff
-  $form['ips_wrapper'] = array(
-      '#title' => t('IP addresses'),
-      '#description' => t('A list of IP addresses this server is publicly available under, one per line. If none is specified, a DNS lookup will be performed based on the server hostname above. <br /><strong>This should point to the public network, if you have such a separation.</strong>'),
-      '#type' => 'fieldset',
-      '#tree' => FALSE,
-      '#weight' => -9,
-      '#prefix' => '<div class="clear-block" id="hosting-ips-wrapper">',
-      '#suffix' => '</div>',
-  );
-
-  $form['ips_wrapper']['ip_addresses'] = array(
-      '#prefix' => '<div id="hosting-ip-addresses">',
-      '#suffix' => '</div>',
-      '#tree' => TRUE,
-      // '#theme' => 'hosting_alias_form',
-  );
-
-  // Get the list of existing IPs
-  $ips = $node->ip_addresses;
-  $ips_count = max(3, empty($ips) ? 3 : count($ips) + 1);
-  // Add alias textfields
-  foreach ($ips as $id => $ip) {
-    $form['ips_wrapper']['ip_addresses'][$id] = array(
-        '#type' => 'textfield',
-        '#default_value' => $ip,
-    );
-    $ips_count--;
-  }
-  $form['ips_wrapper']['new_ip_addresses'] = array(
-      '#prefix' => '<div id="hosting-ip-addresses">',
-      '#suffix' => '</div>',
-      '#tree' => TRUE,
-      // '#theme' => 'hosting_alias_form',
-  );
-  for ($delta = 0; $delta < $ips_count; $delta++) {
-    $form['ips_wrapper']['new_ip_addresses'][$delta] = array(
-        '#type' => 'textfield',
-    );
   }
 
   foreach (hosting_server_services() as $name => $service) {
@@ -327,7 +278,7 @@ function hosting_nodeapi_server_presave(&$node) {
     $ips = gethostbynamel($node->title);
     if ($ips) {
       drupal_set_message(t('Initialized the IP to %ip based on hostname %name. If an HTTP service is enabled, this will be used to create database grants so make sure it is the right address, as seen from the database server.', array('%ip' => join(',', $ips), '%name' => $node->title)), 'message');
-      $node->new_ip_addresses = $ips;
+      $node->ip_addresses = $ips;
     } else {
       drupal_set_message(t("Could not resolve IP address of server %name, not automatically setting IP address. DNS may fail.", array('%name' => $node->title)));
     }
@@ -468,7 +419,7 @@ function hosting_server_view(&$node, $teaser = FALSE, $page = FALSE) {
   $services = hosting_server_services();
 
   $node->content['info'] = array(
-    '#prefix' => '<div id="hosting-server-info" class="hosting-info-list">',
+    '#prefix' => '<div id="hosting-server-info">',
     '#suffix' => '</div>'
   );
 

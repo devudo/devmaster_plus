@@ -41,6 +41,8 @@ function hosting_site_drush_context_import($context, &$node) {
     $client = node_load(HOSTING_DEFAULT_CLIENT);
     if ($context->client_name) {
       $client = hosting_import_client($context->client_name);
+    } elseif ($context->client_email) {      // @deprecated - drop this after 1.x
+      $client = hosting_import_client($context->client_email);
     }
     $node->client = $client->nid;
   }
@@ -58,7 +60,7 @@ function drush_hosting_site_pre_hosting_task($task) {
     $task->args[1] = $backup['filename'];
   }
 
-  if ($task->task_type == 'backup-delete') {
+  if ($task->task_type == 'backup_delete') {
     foreach ($task->task_args as $bid => $filename) {
       if ($filename !== '0') {
         $backups[] = $filename;
@@ -80,6 +82,7 @@ function hosting_site_post_hosting_install_task($task, $data) {
     hosting_package_sync($packages);
     hosting_package_instance_sync($task->ref->nid, $packages);
     $task->ref->site_status = HOSTING_SITE_ENABLED;
+    $task->ref->ip_addresses = array_values($data['context']['site_ip_addresses']);
     $task->ref->no_verify = TRUE;
     $task->ref->verified = time();
     if ($context['cron_key']) {
@@ -183,7 +186,8 @@ function hosting_site_post_hosting_backup_task($task, $data) {
 function hosting_site_post_hosting_import_task($task, $data) {
   hosting_import_site($task->ref->nid, $data['context'], $task->ref->platform);
   
-  $packages = $data['context']['packages'];
+  $context = $data['context'];
+  $packages = $context['packages'];
   hosting_package_sync($packages);
   hosting_package_instance_sync($task->ref->nid, $packages);
 
@@ -193,7 +197,7 @@ function hosting_site_post_hosting_verify_task($task, $data) {
   if ($task->ref->type == 'site') {
     $task->ref->verified = time();
     $task->ref->no_verify = TRUE;
-    $task->ref->db_name = $data['self']['db_name'];
+    $task->ref->ip_addresses = array_values($data['context']['site_ip_addresses']);
     if ($data['context']['cron_key']) {
       $task->ref->cron_key = $data['context']['cron_key'];
     }
