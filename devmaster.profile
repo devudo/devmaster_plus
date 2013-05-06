@@ -27,6 +27,9 @@ function devmaster_profile_modules() {
     /* NICEITIES */
     'hosting_drush_aliases', 'hosting_filemanager', 'hosting_logs', 'hosting_queue_runner', 'hosting_solr',
     
+    /* DEVUDO CONTRIB */
+    'features',
+    
     /* DEVUDO */
     'devudo_devshop', 'devudo_users',
   );
