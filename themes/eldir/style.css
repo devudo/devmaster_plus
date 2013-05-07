@@ -1,4 +1,3 @@
-/* $Id$ */
 
 /**
  * Eldir for Drupal 6
@@ -118,10 +117,6 @@ div.limiter {
   margin:0px auto;
   }
 
-ul.primary {
-    line-height: inherit;
-  }
-
 /**
  * LINKS ==============================================================
  */
@@ -231,7 +226,7 @@ div#navigation ul.links li {
     background:#6ac;
     color:#000;
     }
-
+  
   div#navigation ul.links li.active a,
   div#navigation ul.links li a.active {
     background:#e8e8e8;
@@ -245,7 +240,7 @@ div#header-region {
   padding:20px 0px 0px;
   background:#e8e8e8 url(images/grid_e8.png) 50% 0% repeat; }
 
-div#header-region h2.page-title {
+div#header-region h1.page-title {
   border:0px;
   padding:0px 0px 10px;
   letter-spacing:-2px;
@@ -255,7 +250,7 @@ div#header-region h2.page-title {
   font-weight:normal;
   }
 
-  div#header-region h2.page-title span.label {
+  div#header-region h1.page-title span.label {
     font-size:13px;
     font-weight:bold;
     letter-spacing:0px;
@@ -287,7 +282,7 @@ div#header-region ul.tabs { clear:both; }
 
   div#header-region ul.tabs li.active a,
   div#header-region ul.tabs li a.active {
-    padding: 5px 15px;
+    padding:5px 15px 5px;
     background:#fff;
     color:#444;
     border-bottom:1px solid #fff;
@@ -570,7 +565,6 @@ form div.form-item {
 div.form-item label.option,
 div.form-item label.option * {
   font-size:1em;
-  vertical-align:middle;
   }
 
 div.form-item div.description {
@@ -662,14 +656,14 @@ div.sticky {
     margin:0px;
     }
 
-div.node h2 {
+div.node h1 {
   border:0px;
   font-size:24px;
   line-height:30px;
   font-weight:normal;
   }
 
-  div.node h2 span.label {
+  div.node h1 span.label {
     float:left;
     font-size:9px;
     font-weight:bold;
@@ -682,20 +676,20 @@ div.node h2 {
     color:#fff;
     }
 
-div.node div.submitted {
+div.node div.meta {
   color:#888;
   margin:0px 0px 10px;
   font-size:11px;
   }
 
-  body.node-page div.node div.submitted {
+  body.node-page div.node div.meta {
     border-bottom:1px solid #e8e8e8;
     padding:0px 0px 9px;
     }
 
 div.node ul.links {
   float:right;
-  font-size:11px;
+  font-size:11px;  
   }
 
   div.node ul.links li a {
@@ -771,14 +765,14 @@ table.hosting-table th {
   }
 
 /* Node info */
-#hosting-task-list {
+#hosting-task-list { 
   width:290px;
   float:right;
 }
 
 #hosting-server-info,
 #hosting-platform-info,
-#hosting-package-info,
+#hosting-package-info, 
 #hosting-site-info,
 #hosting-task-info,
 #hosting-site-edit-info {
@@ -816,7 +810,7 @@ table.hosting-table th {
       padding-bottom:5px;
       }
 
-  body.aegir #page div.node div.content div.form-item label {
+  .hosting-info-list div.form-item label {
     position:absolute;
     left:0px;
     width:95px;
@@ -861,27 +855,26 @@ div.hosting-queue-frequency select {
     margin: 0 0 5px 0;
 }
 
-#edit-cron-frequency-ticks-wrapper input,
-#edit-tasks-frequency-items-wrapper input,
-#edit-tasks-frequency-ticks-wrapper input {
-    width: 3em;
-    margin: 0 5px 0 0;
-}
-
-#edit-cron-frequency-ticks-wrapper {
-    float: left;
-}
-
-#edit-tasks-frequency-ticks-wrapper {
+.form-item .hosting-select-frequency-ticks {
     float: left;
     clear: both;
+    width: 3em;
+    margin-right: 5px;
+    font-size: 10px;
 }
 
-#edit-tasks-frequency-unit-wrapper,
-#edit-cron-frequency-unit-wrapper {
+.form-item .hosting-select-frequency-items {
     float: left;
+    width: 3em;
+    margin-right: 5px;
+    margin-bottom: 5px;
+    font-size: 10px;
 }
-
+.form-item .hosting-select-frequency-unit {
+    float: left;
+    padding: 2px;
+}
+  
 /* Keep labels from being truncated */
 body.aegir #page div.node div.content div.form-item label {
   width: auto;
@@ -999,5 +992,3 @@ body.error-page div.page-content {
   border : 1px solid black;
 
 }
-
-

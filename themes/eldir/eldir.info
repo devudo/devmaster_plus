@@ -1,23 +1,21 @@
+; $Id$
 name = Eldir
 description = Companion theme for the Aegir hosting system.
 version = VERSION
-core = 7.x
+core = 6.x
 engine = phptemplate
-
 stylesheets[all][] = style.css
-
-stylesheets-conditional[lt IE 7][all][] = ie6.css
-
-regions[sidebar_first] = Sidebar top
-regions[sidebar_second] = Sidebar bottom
+regions[left] = Left sidebar
+regions[right] = Right sidebar
+regions[content_top] = Content top
 regions[content] = Content
+regions[content_bottom] = Content bottom
 regions[header] = Header
 regions[footer] = Footer
-regions[help] = Help
 
-; Information added by drupal.org packaging script on 2013-03-21
-version = "7.x-3.x-dev"
-core = "7.x"
+; Information added by drupal.org packaging script on 2013-02-08
+version = "6.x-2.0-alpha1"
+core = "6.x"
 project = "eldir"
-datestamp = "1363870450"
+datestamp = "1360351404"
 
