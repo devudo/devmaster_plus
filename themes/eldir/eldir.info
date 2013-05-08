@@ -7,15 +7,6 @@ engine = phptemplate
 stylesheets[all][] = style.css
 regions[left] = Left sidebar
 regions[right] = Right sidebar
-regions[content_top] = Content top
 regions[content] = Content
-regions[content_bottom] = Content bottom
 regions[header] = Header
 regions[footer] = Footer
-
-; Information added by drupal.org packaging script on 2013-02-08
-version = "6.x-2.0-alpha1"
-core = "6.x"
-project = "eldir"
-datestamp = "1360351404"
-

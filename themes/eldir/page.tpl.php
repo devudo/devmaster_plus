@@ -29,21 +29,19 @@
 
   <div id='header-region'><div class='limiter clear-block'>
     <?php print $header; ?>
-    <?php if ($title): ?><h1 class='page-title'><?php print $title ?></h1><?php endif; ?>
+    <?php if ($title): ?><h2 class='page-title'><?php print $title ?></h2><?php endif; ?>
     <?php if ($tabs) print $tabs ?>
   </div></div>
 
   <div id='page'><div class='limiter clear-block'>
 
-    <?php if (isset($tabs2)) print $tabs2 ?>
+    <?php if ($tabs2) print $tabs2 ?>
 
     <div id='main'>
       <div class='page-content'>
         <?php if ($mission): print '<div id="mission">'. $mission .'</div>'; endif; ?>
         <?php if ($help): print $help; endif; ?>
-        <?php print $content_top ?>
         <?php print $content ?>
-        <?php print $content_bottom ?>
         <?php print $feed_icons ?>
       </div>
     </div><!-- /main -->

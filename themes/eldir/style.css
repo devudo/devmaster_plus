@@ -1,3 +1,4 @@
+/* $Id$ */
 
 /**
  * Eldir for Drupal 6
@@ -240,7 +241,7 @@ div#header-region {
   padding:20px 0px 0px;
   background:#e8e8e8 url(images/grid_e8.png) 50% 0% repeat; }
 
-div#header-region h1.page-title {
+div#header-region h2.page-title {
   border:0px;
   padding:0px 0px 10px;
   letter-spacing:-2px;
@@ -250,7 +251,7 @@ div#header-region h1.page-title {
   font-weight:normal;
   }
 
-  div#header-region h1.page-title span.label {
+  div#header-region h2.page-title span.label {
     font-size:13px;
     font-weight:bold;
     letter-spacing:0px;
@@ -565,6 +566,7 @@ form div.form-item {
 div.form-item label.option,
 div.form-item label.option * {
   font-size:1em;
+  vertical-align:middle;
   }
 
 div.form-item div.description {
@@ -656,14 +658,14 @@ div.sticky {
     margin:0px;
     }
 
-div.node h1 {
+div.node h2 {
   border:0px;
   font-size:24px;
   line-height:30px;
   font-weight:normal;
   }
 
-  div.node h1 span.label {
+  div.node h2 span.label {
     float:left;
     font-size:9px;
     font-weight:bold;
@@ -810,7 +812,7 @@ table.hosting-table th {
       padding-bottom:5px;
       }
 
-  .hosting-info-list div.form-item label {
+  body.aegir #page div.node div.content div.form-item label {
     position:absolute;
     left:0px;
     width:95px;
@@ -855,25 +857,26 @@ div.hosting-queue-frequency select {
     margin: 0 0 5px 0;
 }
 
-.form-item .hosting-select-frequency-ticks {
-    float: left;
-    clear: both;
+#edit-cron-frequency-ticks-wrapper input,
+#edit-tasks-frequency-items-wrapper input,
+#edit-tasks-frequency-ticks-wrapper input {
     width: 3em;
-    margin-right: 5px;
-    font-size: 10px;
+    margin: 0 5px 0 0;
 }
 
-.form-item .hosting-select-frequency-items {
+#edit-cron-frequency-ticks-wrapper {
     float: left;
-    width: 3em;
-    margin-right: 5px;
-    margin-bottom: 5px;
-    font-size: 10px;
 }
-.form-item .hosting-select-frequency-unit {
+
+#edit-tasks-frequency-ticks-wrapper {
     float: left;
-    padding: 2px;
+    clear: both;
 }
+
+#edit-tasks-frequency-unit-wrapper,
+#edit-cron-frequency-unit-wrapper {
+    float: left;
+}  
   
 /* Keep labels from being truncated */
 body.aegir #page div.node div.content div.form-item label {
